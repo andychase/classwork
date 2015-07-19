@@ -80,6 +80,20 @@ char room_path_buffer[10000];
 char buf[100000];
 char dir_name[36];
 
+// Helper Shuffle Fucntion
+// From: http://stackoverflow.com/a/6127606
+void shuffle(const char **array, size_t n) {
+    if (n > 1) {
+        size_t i;
+        for (i = 0; i < n - 1; i++) {
+            size_t j = i + rand() / (RAND_MAX / (n - i) + 1);
+            const char *t = array[j];
+            array[j] = array[i];
+            array[i] = t;
+        }
+    }
+}
+
 int room_name_to_room_index(const char *key) {
     int i;
     for (i = 0; i < NUMBER_OF_ROOMS; i++) {
@@ -208,20 +222,6 @@ void build_rooms() {
 //         return path + "\n" + enter_room(path)
 //
 //
-// def main():
-//     global steps
-//     random.shuffle(room_names)
-//     rand_gen = lambda: random.randint(connections_min, connections_max)
-//     _room_connections = build_room_connections(room_names, room_connections, rand_gen)
-//     build_rooms(_room_connections)
-//     buf = enter_room("START")
-//     print(winning_message % (steps, buf))
-//     # #include <stdlib.h>
-//     # "Cheating" a bit here since I don't think cleanup
-//     # was a primary part of the assignment
-//
-//     # system("rm -fr %s" % dir_name)
-//
 
 int main() {
     // Setup
@@ -242,13 +242,24 @@ int main() {
         for (i = 0; i < 100; i++)
             assert(RANDRANGE(3, 5) >= 3 && RANDRANGE(3, 5) <= 5);
     }
+    // Setup:Randomize rooms
+    shuffle(room_names, NUMBER_OF_ROOMS);
+    // Setup:Build rooms
     build_room_connections();
-    // Room 0 should have a connection
+    // Test:Build Room 0 should have a connection
     assert(room_connections[0][0]);
-    assert(dir_name[0] == 'c');
 
     build_rooms();
-    puts("test");
+    //enter_room("START");
+
+    // Cleanup temporary ui files
+    int i = 0;
+    for (i = 0; i < NUMBER_OF_ROOMS; i++) {
+        sprintf(buf, "%s/%s.adventure.txt", dir_name, room_names[i]);
+        unlink(buf);
+    }
+    sprintf(buf, "%s/START.adventure.txt", dir_name);
+    unlink(buf);
 
     return 0;
 }
