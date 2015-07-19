@@ -3,7 +3,7 @@
  chasean
 
 
-I used the protoype-first method for building this assignment for the following reasons:
+I used the prototype-first method for building this assignment for the following reasons:
 
 * I've never used the prototype-first method and I wanted to try it
 * I have more practice in python than in c so I wanted to think through the problem in a familiar language
@@ -40,36 +40,27 @@ My experience with the prototype-first solution:
 #define RANDRANGE(a, b)           (rand() % (b-a)) + a
 // Configuration
 #define dir_name_format "chasean.rooms.%d"
-//
 
-//
 enum RoomType {
     MID_ROOM = 0, START_ROOM, END_ROOM
 };
 const char *room_types[] = {"MID_ROOM", "START_ROOM", "END_ROOM"};
-
-//
-const char *room_names[] = {"PLUGH", "PLOVER", "twisty", "Zork", "Crowther", "Dungeon", "YA"};
+const char *room_names[] = {"\xF0\x9F\x8F\xA0", "\xF0\x9F\x8F\xA1", "\xF0\x9F\x8F\xA2", "\xF0\x9F\x8F\xA3",
+                            "\xF0\x9F\x8F\xA4", "\xF0\x9F\x8F\xA5", "\xF0\x9F\x8F\xA6"};
 
 #define NUMBER_OF_ROOMS 7
-//
-const char *room_connections[NUMBER_OF_ROOMS][NUMBER_OF_ROOMS];
-int room_connections_sizes[NUMBER_OF_ROOMS];
-//
-//
 #define CONNECTIONS_MIN 3
 #define CONNECTIONS_MAX 6
+const char *room_connections[NUMBER_OF_ROOMS][NUMBER_OF_ROOMS];
+int room_connections_sizes[NUMBER_OF_ROOMS];
+
 // Configuration: Strings
 #define room_file_format_header "ROOM NAME: %s\n"
 #define room_file_format_footer "ROOM TYPE: %s\n"
-//
 #define room_connection_format "CONNECTION %d: %s\n"
-
 #define error_msg "\nHUH? I DON'T UNDERSTAND THAT ROOM. TRY AGAIN.\n\n"
-//
 #define prompt_header "CURRENT LOCATION: %s\nPOSSIBLE CONNECTIONS: "
 #define prompt_footer ".\nWHERE TO? > "
-//
 #define winning_message "YOU HAVE FOUND THE END ROOM. CONGRATULATIONS!\n"\
 "YOU TOOK %d STEPS. YOUR PATH TO VICTORY WAS:\n"\
 "%s"
@@ -84,6 +75,8 @@ char room_path_buffer[BUF_SIZE];
 char buf[BUF_SIZE];
 char dir_name[36];
 
+//       External Vendor functions
+// -------------------------
 // Helper Shuffle Function
 // From: http://stackoverflow.com/a/6127606
 void shuffle(const char **array, size_t n) {
@@ -98,10 +91,14 @@ void shuffle(const char **array, size_t n) {
     }
 }
 
-// Strip Function
-// Below from: http://stackoverflow.com/a/7775172
+// Helper Strip Function
+// From: http://stackoverflow.com/a/7775172
 void strip(char *buf) { for (int i = 0, j = 0; (buf[j] = buf[i]); j += !isspace(buf[i++])); }
 
+//       Helper functions
+// -------------------------
+
+// Converts a room name to its index in the room_index
 int room_name_to_room_index(const char *key) {
     int i;
     for (i = 0; i < NUMBER_OF_ROOMS; i++) {
@@ -111,6 +108,7 @@ int room_name_to_room_index(const char *key) {
     return -1;
 }
 
+// Checks the room_connections array for certain room name string in a particular room index
 int in_room_connections(const char *test_room, int room_index) {
     int i;
     for (i = 0; i < room_connections_sizes[room_index]; i++)
@@ -119,8 +117,8 @@ int in_room_connections(const char *test_room, int room_index) {
     return 0;
 }
 
-//
-//
+// Generates room_connections array randomly
+// based on a shuffled room_names and its own random number_of_connections in each room
 void build_room_connections() {
     int this_room_index = 0;
     const char **rooms_left = room_names;
@@ -147,6 +145,7 @@ void build_room_connections() {
     }
 }
 
+// Given a file, a room_name, and a room_type print room data to that file
 void build_a_room(FILE *f, const char *room_name, enum RoomType room_type) {
     fprintf(f, room_file_format_header, room_name);
     const char **const connections = room_connections[room_name_to_room_index(room_name)];
@@ -167,6 +166,7 @@ void set_start_end_rooms() {
     }
 }
 
+// Build all rooms
 void build_rooms() {
     assert(start_room != end_room);
     int i = 0;
