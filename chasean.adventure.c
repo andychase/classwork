@@ -1,6 +1,34 @@
+/*
+ Andy Chase
+ chasean
+
+
+I used the protoype-first method for building this assignment for the following reasons:
+
+* I've never used the prototype-first method and I wanted to try it
+* I have more practice in python than in c so I wanted to think through the problem in a familiar language
+* The spec was clear and static
+* This assignment had basically two parts:
+- Figuring out the solution
+- Figuring out how to actually write the solution in c
+ (so it makes sense to figure out the solution in a different language)
+
+My experience with the prototype-first solution:
+
+ Overall it felt longer, but I liked it because I was able to flesh out the solution
+ and get a really strong feeling for its correctness before I dove in and did the implementation.
+ (Honestly it probably overall would have taken longer to start in c first, but it did FEEL longer)
+
+ It gave me a strong structure to start with which I liked and allowed me to just bypass any "writers block" or
+ distractions I might have had with minor c details starting in c. In that way I think it was less risky
+ time-wise to start an implementation in python first.
+
+ "Computer-runnable pseudo-code" <- I definitely got that impression. I was also able to get a sense of what my
+ data structures should look like while running so that was a huge plus while debugging.
+
+ */
 #include <stdio.h>
 #include <assert.h>
-
 #include <time.h>
 #include <stdlib.h>
 
@@ -10,11 +38,11 @@
 // Configuration
 const char *dir_name = "chasean.rooms.%d";
 //
-const char *room_file_format_header = "ROOM NAME: %s\n";
-const char *room_file_format_footer = "ROOM TYPE: %s\n";
+
 //
-const char *room_connection_format = "CONNECTION %d: %s\n";
-//
+enum RoomType {
+    MID_ROOM = 0, START_ROOM, END_ROOM
+};
 const char *room_types[] = {"MID_ROOM", "START_ROOM", "END_ROOM"};
 
 //
@@ -28,22 +56,27 @@ int room_connections_sizes[NUMBER_OF_ROOMS];
 //
 #define CONNECTIONS_MIN 3
 #define CONNECTIONS_MAX 6
+// Configuration: Strings
+#define room_file_format_header "ROOM NAME: %s\n"
+#define room_file_format_footer "ROOM TYPE: %s\n"
 //
-const char *error_msg = "HUH? I DON'T UNDERSTAND THAT ROOM. TRY AGAIN.";
+#define room_connection_format "CONNECTION %d: %s\n"
+
+#define error_msg "HUH? I DON'T UNDERSTAND THAT ROOM. TRY AGAIN."
 //
-const char *prompt_header = "CURRENT LOCATION: %s\nPOSSIBLE CONNECTIONS: ";
-const char *prompt_footer = ".\nWHERE TO? > ";
+#define prompt_header "CURRENT LOCATION: %s\nPOSSIBLE CONNECTIONS: "
+#define prompt_footer ".\nWHERE TO? > "
 //
-const char *winning_message = "YOU HAVE FOUND THE END ROOM. CONGRATULATIONS!\n"
-    "YOU TOOK %d STEPS. YOUR PATH TO VICTORY WAS:\n"
-    "%s";
+#define winning_message "YOU HAVE FOUND THE END ROOM. CONGRATULATIONS!\n"\
+"YOU TOOK %d STEPS. YOUR PATH TO VICTORY WAS:\n"\
+"%s"
+
 //
 int steps = 0;
 //
 char room_path_buffer[10000];
+char buf[100000];
 
-//
-//
 int room_name_to_room_index(const char *key) {
     int i;
     for (i = 0; i < NUMBER_OF_ROOMS; i++) {
@@ -79,7 +112,7 @@ void build_room_connections() {
         for (i = 0; i < rooms_left_number; i++) {
             if (i >= number_of_connections)
                 break;
-            const char * room = rooms_left[i];
+            const char *room = rooms_left[i];
             if (!in_room_connections(room, this_room_index)) {
                 int other_room_index = room_name_to_room_index(room);
                 room_connections[this_room_index][room_connections_sizes[this_room_index]++] = room;
@@ -89,37 +122,44 @@ void build_room_connections() {
         }
     }
 }
-//
-// def build_a_room(f, the_dir_name, room_connections, room_name, start=False, end=False):
-//     room_type = room_types[0]
-//     if start:
-//         room_type = room_types[1]
-//     elif end:
-//         room_type = room_types[2]
-//
-//     f.write(room_file_format_header % room_name)
-//     connections = room_connections[room_name_to_room_index(room_names, room_name)]
-//     for number, name in enumerate(connections):
-//         f.write(room_connection_format % (number, name))
-//     f.write(room_file_format_footer % room_type)
-//
-//     if start:
-//         f2 = open(the_dir_name + "/START.adventure.txt", 'w')
-//         f2.write(prompt_header % room_name)
-//         for number, name in enumerate(connections):
-//             f2.write(name)
-//             if number != len(connections) - 1:
-//                 f2.write(", ")
-//         f2.write(prompt_footer)
-//
-//     f2 = open(the_dir_name + "/%s.adventure.txt" % room_name, 'w')
-//     f2.write(prompt_header % room_name)
-//     for number, name in enumerate(connections):
-//         f2.write(name)
-//         if number != len(connections) - 1:
-//             f2.write(", ")
-//     f2.write(prompt_footer)
-//
+
+void build_a_room(FILE *f, const char *the_dir_name, const char *room_name, enum RoomType room_type) {
+    fprintf(f, room_file_format_header, room_name);
+    const char **const connections = room_connections[room_name_to_room_index(room_name)];
+    int connections_number = room_connections_sizes[room_name_to_room_index(room_name)];
+
+    int number = 0;
+    for (number = 0; number < connections_number; number++) {
+        const char *name = connections[number];
+        fprintf(f, room_connection_format, number, name);
+    }
+    fprintf(f, room_file_format_footer, room_types[room_type]);
+
+    if (room_type == START_ROOM) {
+        sprintf(buf, "%s/START.adventure.txt", the_dir_name);
+        FILE *f2 = fopen(buf, "w");
+
+        fprintf(f2, prompt_header, room_name);
+        for (number = 0; number < connections_number; number++) {
+            const char *name = connections[number];
+            fprintf(f2, "%s", name);
+            if (number != connections_number - 1)
+                fprintf(f2, ", ");
+        }
+        fprintf(f2, prompt_footer);
+        fclose(f2);
+    }
+    sprintf(buf, "%s/%s.adventure.txt", the_dir_name, room_name);
+    FILE *f2 = fopen(buf, "w");
+    fprintf(f2, prompt_header, room_name);
+    for (number = 0; number < connections_number; number++) {
+        const char *name = connections[number];
+        fprintf(f2, "%s", name);
+        if (number != connections_number - 1)
+            fprintf(f2, ", ");
+    }
+    fprintf(f2, prompt_footer);
+}
 //
 // def build_rooms(_room_connections):
 //     the_dir_name = dir_name % os.getpid()
@@ -189,6 +229,9 @@ int main() {
     // Room 0 should have a connection
     assert(room_connections[0][0]);
 
+    FILE *f = fopen("./myfile", "w");
+    build_a_room(f, ".", "blah", MID_ROOM);
+    fclose(f);
     puts("test");
 
     return 0;
