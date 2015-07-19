@@ -158,31 +158,6 @@ void build_a_room(FILE *f, const char *the_dir_name, const char *room_name, enum
         fprintf(f, room_connection_format, number, name);
     }
     fprintf(f, room_file_format_footer, room_types[room_type]);
-
-    if (room_type == START_ROOM) {
-        sprintf(buf, "%s/START.adventure.txt", the_dir_name);
-        FILE *f2 = fopen(buf, "w");
-
-        fprintf(f2, prompt_header, room_name);
-        for (number = 0; number < connections_number; number++) {
-            const char *name = connections[number];
-            fprintf(f2, "%s", name);
-            if (number != connections_number - 1)
-                fprintf(f2, ", ");
-        }
-        fprintf(f2, prompt_footer);
-        fclose(f2);
-    }
-    sprintf(buf, "%s/%s.adventure.txt", the_dir_name, room_name);
-    FILE *f2 = fopen(buf, "w");
-    fprintf(f2, prompt_header, room_name);
-    for (number = 0; number < connections_number; number++) {
-        const char *name = connections[number];
-        fprintf(f2, "%s", name);
-        if (number != connections_number - 1)
-            fprintf(f2, ", ");
-    }
-    fprintf(f2, prompt_footer);
 }
 
 void set_start_end_rooms() {
@@ -313,20 +288,12 @@ int main() {
     // Test:Build Room 0 should have a connection
     assert(room_connections[0][0]);
 
+    // Main Procedure
     set_start_end_rooms();
     build_rooms();
     reset();
     read_room_files();
     enter_room(room_names[start_room]);
-
-    // Cleanup temporary ui files
-    int i = 0;
-    for (i = 0; i < NUMBER_OF_ROOMS; i++) {
-        sprintf(buf, "%s/%s.adventure.txt", dir_name, room_names[i]);
-        unlink(buf);
-    }
-    sprintf(buf, "%s/START.adventure.txt", dir_name);
-    unlink(buf);
 
     return 0;
 }
