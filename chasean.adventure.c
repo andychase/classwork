@@ -73,9 +73,11 @@ int room_connections_sizes[NUMBER_OF_ROOMS];
 "YOU TOOK %d STEPS. YOUR PATH TO VICTORY WAS:\n"\
 "%s"
 
-//
+// Other helper variables
 int steps = 0;
-//
+int start_room = 0;
+int end_room = 0;
+
 char room_path_buffer[10000];
 char buf[100000];
 char dir_name[36];
@@ -177,14 +179,15 @@ void build_a_room(FILE *f, const char *the_dir_name, const char *room_name, enum
     fprintf(f2, prompt_footer);
 }
 
-void build_rooms() {
-    int start_room = 0;
-    int end_room = 0;
+void set_start_end_rooms() {
     while (start_room == end_room) {
         start_room = RANDRANGE(0, NUMBER_OF_ROOMS);
         end_room = RANDRANGE(0, NUMBER_OF_ROOMS);
     }
+}
 
+void build_rooms() {
+    assert(start_room != end_room);
     int i = 0;
     for (i = 0; i < NUMBER_OF_ROOMS; i++) {
         sprintf(buf, "%s/room%d.adventure.txt", dir_name, (i + 1));
@@ -249,6 +252,7 @@ int main() {
     // Test:Build Room 0 should have a connection
     assert(room_connections[0][0]);
 
+    set_start_end_rooms();
     build_rooms();
     //enter_room("START");
 
