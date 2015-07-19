@@ -85,8 +85,6 @@ int room_name_to_room_index(const char *key) {
     for (i = 0; i < NUMBER_OF_ROOMS; i++) {
         if (key == room_names[i])
             return i;
-        else
-            i += 1;
     }
     return -1;
 }
@@ -224,6 +222,7 @@ int main() {
     // ----------
     // Test: room_name_to_room_index
     assert(room_name_to_room_index(room_names[0]) == 0);
+    assert(room_name_to_room_index(room_names[1]) == 1);
     assert(room_name_to_room_index("blah") == -1);
     // Test RANDRANGE
     {
