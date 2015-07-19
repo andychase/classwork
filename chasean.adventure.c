@@ -3,7 +3,15 @@
  chasean
 
 
-I used the prototype-first method for building this assignment for the following reasons:
+MY IMPLEMENTATION USES (EMOJI): UNICODE CODEPOINTS BETWEEN U+1F3E0 AND U+1F3E9.
+IF YOUR TERMINAL DOES NOT SUPPORT THESE
+CODEPOINTS GRAPHICALLY THE PROGRAM MAY BE DIFFICULT TO USE.
+
+
+I used the prototype-first method for building this assignment.
+I drafted the solution in a seperate prototype.py and ported the app to c.
+
+I followed the prototype-first method for the following reasons:
 
 * I've never used the prototype-first method and I wanted to try it
 * I have more practice in python than in c so I wanted to think through the problem in a familiar language
@@ -11,20 +19,22 @@ I used the prototype-first method for building this assignment for the following
 * This assignment had basically two parts:
 - Figuring out the solution
 - Figuring out how to actually write the solution in c
- (so it makes sense to figure out the solution in a different language)
+ (so it makes sense to figure out the solution in a higher-level language)
 
-My experience with the prototype-first solution:
+How I felt about the prototype-first method:
 
- Overall it felt longer, but I liked it because I was able to flesh out the solution
+ Overall it felt longer, but I liked it because I was able to build out a solution
  and get a really strong feeling for its correctness before I dove in and did the implementation.
- (Honestly it probably overall would have taken longer to start in c first, but it did FEEL longer)
+ (Honestly it may have overall taken longer to start in c first, but it did FEEL longer)
 
- It gave me a strong structure to start with which I liked and allowed me to just bypass any "writers block" or
+ It gave me a strong structure to start with which I liked and allowed me to just bypass any "writer's block" or
  distractions I might have had with minor c details starting in c. In that way I think it was less risky
  time-wise to start an implementation in python first.
 
  "Computer-runnable pseudo-code" <- I definitely got that impression. I was also able to get a sense of what my
  data structures should look like while running so that was a huge plus while debugging.
+
+
 
  */
 #include <stdio.h>
@@ -95,7 +105,6 @@ void shuffle(const char **array, size_t n) {
 // From: http://stackoverflow.com/a/7775172
 void strip(char *buf) { for (int i = 0, j = 0; (buf[j] = buf[i]); j += !isspace(buf[i++])); }
 
-//       Helper functions
 // -------------------------
 
 // Converts a room name to its index in the room_index
@@ -166,7 +175,6 @@ void set_start_end_rooms() {
     }
 }
 
-// Build all rooms
 void build_rooms() {
     assert(start_room != end_room);
     int i = 0;
@@ -184,6 +192,7 @@ void build_rooms() {
     }
 }
 
+// This resets the game data so it can be read back in.
 void reset() {
     start_room = 0;
     end_room = 0;
@@ -213,9 +222,9 @@ void read_room_file(int room_id) {
         sscanf(buf, room_file_format_footer, room_type);
     }
     assert(this_room_index != -1);
-    if (strcmp(room_type, "START_ROOM") == 0)
+    if (strcmp(room_type, room_types[START_ROOM]) == 0)
         start_room = this_room_index;
-    if (strcmp(room_type, "END_ROOM") == 0)
+    if (strcmp(room_type, room_types[END_ROOM]) == 0)
         end_room = this_room_index;
 }
 
@@ -244,7 +253,7 @@ void enter_room(const char *room_name) {
     int input_room_index = room_name_to_room_index(buf);
     int in_room_index = room_index != -1;
     if (in_room_index && in_room_connections(buf, room_index)) {
-        steps += 1;
+        steps++;
         sprintf(buf, "%s", room_path_buffer);
         sprintf(room_path_buffer, "%s%s\n", buf, room_names[input_room_index]);
         if (input_room_index == end_room) {
