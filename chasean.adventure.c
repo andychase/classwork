@@ -33,6 +33,7 @@ My experience with the prototype-first solution:
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <string.h>
 
 
 #define RANDRANGE(a, b)           (rand() % (b-a)) + a
@@ -99,7 +100,7 @@ void shuffle(const char **array, size_t n) {
 int room_name_to_room_index(const char *key) {
     int i;
     for (i = 0; i < NUMBER_OF_ROOMS; i++) {
-        if (key == room_names[i])
+        if (strcmp(key, room_names[i]) == 0)
             return i;
     }
     return -1;
