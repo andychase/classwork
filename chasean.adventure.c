@@ -162,17 +162,29 @@ void build_a_room(FILE *f, const char *the_dir_name, const char *room_name, enum
     }
     fprintf(f2, prompt_footer);
 }
-//
-// def build_rooms(_room_connections):
-//     the_dir_name = dir_name % os.getpid()
-//     if not os.path.isdir(the_dir_name):
-//         os.mkdir(the_dir_name)
-//     for i in range(0, number_of_rooms):
-//         f = open(the_dir_name + "/room%d.adventure.txt" % (i + 1), 'w')
-//         build_a_room(f, the_dir_name, _room_connections, room_names[i], start=(i == 0), end=(i == 1))
-//         f.close()
-//
-//
+
+void build_rooms() {
+    int start_room = 0;
+    int end_room = 0;
+    while (start_room == end_room) {
+        start_room = RANDRANGE(0, NUMBER_OF_ROOMS);
+        end_room = RANDRANGE(0, NUMBER_OF_ROOMS);
+    }
+
+    int i = 0;
+    for (i = 0; i < NUMBER_OF_ROOMS; i++) {
+        sprintf(buf, "%s/room%d.adventure.txt", dir_name, (i + 1));
+        FILE *f = fopen(buf, "w");
+        assert(f);
+        enum RoomType room_type = MID_ROOM;
+        if (i == start_room)
+            room_type = START_ROOM;
+        else if (i == end_room)
+            room_type = END_ROOM;
+        build_a_room(f, dir_name, room_names[i], room_type);
+        fclose(f);
+    }
+}
 // def enter_room(room_name):
 //     global steps
 //     dir_name = dir_name_format % os.getpid()
@@ -235,9 +247,7 @@ int main() {
     assert(room_connections[0][0]);
     assert(dir_name[0] == 'c');
 
-    FILE *f = fopen("./myfile", "w");
-    build_a_room(f, ".", "blah", MID_ROOM);
-    fclose(f);
+    build_rooms();
     puts("test");
 
     return 0;
