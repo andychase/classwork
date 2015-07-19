@@ -79,8 +79,9 @@ int steps = 0;
 int start_room = 0;
 int end_room = 0;
 
-char room_path_buffer[10000];
-char buf[100000];
+#define BUF_SIZE 10000
+char room_path_buffer[BUF_SIZE];
+char buf[BUF_SIZE];
 char dir_name[36];
 
 // Helper Shuffle Fucntion
@@ -211,6 +212,40 @@ void reset() {
     for (i = 0; i < NUMBER_OF_ROOMS; i++)
         room_connections_sizes[i] = 0;
 }
+
+void read_room_file(int room_id) {
+    int res = 0;
+    char room_type[30];
+    char room_name[30];
+    int connection_number = -1;
+    char connection_name[30];
+    int this_room_index = -1;
+    int other_room_index;
+    sprintf(buf, "%s/room%d.adventure.txt", dir_name, (room_id + 1));
+    FILE *f = fopen(buf, "r");
+    while (fgets(buf, BUF_SIZE, f)) {
+        sscanf(buf, room_file_format_header, room_name);
+        res = sscanf(buf, room_connection_format, &connection_number, connection_name);
+        if (res) {
+            this_room_index = room_name_to_room_index(room_name);
+            other_room_index = room_name_to_room_index(connection_name);
+            room_connections[this_room_index][room_connections_sizes[this_room_index]++] = room_names[other_room_index];
+        }
+        sscanf(buf, room_file_format_footer, room_type);
+    }
+    assert(this_room_index != -1);
+    if (strcmp(room_type, "START_ROOM") == 0)
+        start_room = this_room_index;
+    if (strcmp(room_type, "END_ROOM") == 0)
+        end_room = this_room_index;
+}
+
+void read_room_files() {
+    int i;
+    for (i = 0; i < NUMBER_OF_ROOMS; i++)
+        read_room_file(i);
+}
+
 // def enter_room(room_name):
 //     global steps
 //     dir_name = dir_name_format % os.getpid()
@@ -263,6 +298,8 @@ int main() {
 
     set_start_end_rooms();
     build_rooms();
+    reset();
+    read_room_files();
     //enter_room("START");
 
     // Cleanup temporary ui files
