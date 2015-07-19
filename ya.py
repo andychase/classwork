@@ -64,7 +64,7 @@ def build_a_room(f, the_dir_name, room_name, start=False, end=False):
         f2.write(prompt_header % room_name)
         for number, name in enumerate(connections):
             f2.write(name)
-            if number != len(connections)-1:
+            if number != len(connections) - 1:
                 f2.write(", ")
         f2.write(prompt_footer)
 
@@ -72,7 +72,7 @@ def build_a_room(f, the_dir_name, room_name, start=False, end=False):
     f2.write(prompt_header % room_name)
     for number, name in enumerate(connections):
         f2.write(name)
-        if number != len(connections)-1:
+        if number != len(connections) - 1:
             f2.write(", ")
     f2.write(prompt_footer)
 
