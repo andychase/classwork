@@ -34,10 +34,10 @@ My experience with the prototype-first solution:
 #include <unistd.h>
 #include <sys/stat.h>
 #include <string.h>
+#include <ctype.h>
 
 
 #define RANDRANGE(a, b)           (rand() % (b-a)) + a
-
 // Configuration
 #define dir_name_format "chasean.rooms.%d"
 //
@@ -65,7 +65,7 @@ int room_connections_sizes[NUMBER_OF_ROOMS];
 //
 #define room_connection_format "CONNECTION %d: %s\n"
 
-#define error_msg "HUH? I DON'T UNDERSTAND THAT ROOM. TRY AGAIN."
+#define error_msg "\nHUH? I DON'T UNDERSTAND THAT ROOM. TRY AGAIN.\n\n"
 //
 #define prompt_header "CURRENT LOCATION: %s\nPOSSIBLE CONNECTIONS: "
 #define prompt_footer ".\nWHERE TO? > "
@@ -84,7 +84,7 @@ char room_path_buffer[BUF_SIZE];
 char buf[BUF_SIZE];
 char dir_name[36];
 
-// Helper Shuffle Fucntion
+// Helper Shuffle Function
 // From: http://stackoverflow.com/a/6127606
 void shuffle(const char **array, size_t n) {
     if (n > 1) {
@@ -98,6 +98,10 @@ void shuffle(const char **array, size_t n) {
     }
 }
 
+// Strip Function
+// Below from: http://stackoverflow.com/a/7775172
+void strip(char *buf) { for (int i = 0, j = 0; (buf[j] = buf[i]); j += !isspace(buf[i++])); }
+
 int room_name_to_room_index(const char *key) {
     int i;
     for (i = 0; i < NUMBER_OF_ROOMS; i++) {
@@ -110,7 +114,7 @@ int room_name_to_room_index(const char *key) {
 int in_room_connections(const char *test_room, int room_index) {
     int i;
     for (i = 0; i < room_connections_sizes[room_index]; i++)
-        if (room_connections[room_index][i] == test_room)
+        if (strcmp(room_connections[room_index][i], test_room) == 0)
             return 1;
     return 0;
 }
@@ -246,29 +250,42 @@ void read_room_files() {
         read_room_file(i);
 }
 
-// def enter_room(room_name):
-//     global steps
-//     dir_name = dir_name_format % os.getpid()
-//     f = open(dir_name + "/%s.adventure.txt" % room_name)
-//     buf = f.read()
-//     print(buf)
-//     f.close()
-//     new_path = ""
-//     path = ""
-//     while not new_path:
-//         path = input()
-//         if path in buf and path in room_names:
-//             new_path = path
-//         else:
-//             print(error_msg)
-//             print(buf)
-//     steps += 1
-//     if path == room_names[1]:
-//         return path
-//     else:
-//         return path + "\n" + enter_room(path)
-//
-//
+void enter_room(const char *room_name) {
+    printf(prompt_header, room_name);
+    int number;
+    int room_index = room_name_to_room_index(room_name);
+    int connections_number = room_connections_sizes[room_index];
+    const char **const connections = room_connections[room_index];
+
+    for (number = 0; number < connections_number; number++) {
+        const char *name = connections[number];
+        printf("%s", name);
+        if (number != connections_number - 1)
+            printf(", ");
+    }
+    printf(prompt_footer);
+    fgets(buf, BUF_SIZE, stdin);
+    strip(buf);
+    int input_room_index = room_name_to_room_index(buf);
+    int in_room_index = room_index != -1;
+    if (in_room_index && in_room_connections(buf, room_index)) {
+        steps += 1;
+        sprintf(buf, "%s", room_path_buffer);
+        sprintf(room_path_buffer, "%s%s\n", buf, room_names[input_room_index]);
+        if (input_room_index == end_room) {
+            printf(winning_message, steps, room_path_buffer);
+            return;
+        } else {
+            enter_room(room_names[input_room_index]);
+            return;
+        }
+    } else {
+        printf(error_msg);
+        enter_room(room_name);
+        return;
+    }
+}
+
 
 int main() {
     // Setup
@@ -300,7 +317,7 @@ int main() {
     build_rooms();
     reset();
     read_room_files();
-    //enter_room("START");
+    enter_room(room_names[start_room]);
 
     // Cleanup temporary ui files
     int i = 0;
