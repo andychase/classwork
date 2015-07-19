@@ -1,6 +1,5 @@
 import os
 import random
-import shutil
 
 # Config
 
@@ -45,7 +44,6 @@ YOU TOOK %d STEPS. YOUR PATH TO VICTORY WAS:
 
 steps = 0
 
-buffer = ""
 
 
 def room_name_to_room_index(room_names, key):
