@@ -31,12 +31,14 @@ My experience with the prototype-first solution:
 #include <assert.h>
 #include <time.h>
 #include <stdlib.h>
+#include <unistd.h>
+#include <sys/stat.h>
 
 
 #define RANDRANGE(a, b)           (rand() % (b-a)) + a
 
 // Configuration
-const char *dir_name = "chasean.rooms.%d";
+#define dir_name_format "chasean.rooms.%d"
 //
 
 //
@@ -76,6 +78,7 @@ int steps = 0;
 //
 char room_path_buffer[10000];
 char buf[100000];
+char dir_name[36];
 
 int room_name_to_room_index(const char *key) {
     int i;
@@ -115,6 +118,7 @@ void build_room_connections() {
             const char *room = rooms_left[i];
             if (!in_room_connections(room, this_room_index)) {
                 int other_room_index = room_name_to_room_index(room);
+                assert(other_room_index != -1);
                 room_connections[this_room_index][room_connections_sizes[this_room_index]++] = room;
                 if (!in_room_connections(this_room, other_room_index))
                     room_connections[other_room_index][room_connections_sizes[other_room_index]++] = this_room;
@@ -173,8 +177,8 @@ void build_a_room(FILE *f, const char *the_dir_name, const char *room_name, enum
 //
 // def enter_room(room_name):
 //     global steps
-//     the_dir_name = dir_name % os.getpid()
-//     f = open(the_dir_name + "/%s.adventure.txt" % room_name)
+//     dir_name = dir_name_format % os.getpid()
+//     f = open(dir_name + "/%s.adventure.txt" % room_name)
 //     buf = f.read()
 //     print(buf)
 //     f.close()
@@ -206,13 +210,15 @@ void build_a_room(FILE *f, const char *the_dir_name, const char *room_name, enum
 //     # "Cheating" a bit here since I don't think cleanup
 //     # was a primary part of the assignment
 //
-//     # system("rm -fr %s" % the_dir_name)
+//     # system("rm -fr %s" % dir_name)
 //
 
 int main() {
     // Setup
     // ----------
     srand((unsigned int) time(NULL));
+    sprintf(dir_name, dir_name_format, getpid());
+    assert(mkdir(dir_name, 0777) == 0);
 
     // Tests
     // ----------
@@ -228,6 +234,7 @@ int main() {
     build_room_connections();
     // Room 0 should have a connection
     assert(room_connections[0][0]);
+    assert(dir_name[0] == 'c');
 
     FILE *f = fopen("./myfile", "w");
     build_a_room(f, ".", "blah", MID_ROOM);
