@@ -103,7 +103,10 @@ void shuffle(const char **array, size_t n) {
 
 // Helper Strip Function
 // From: http://stackoverflow.com/a/7775172
-void strip(char *buf) { for (int i = 0, j = 0; (buf[j] = buf[i]); j += !isspace(buf[i++])); }
+void strip(char *buf) {
+    int i, j;
+    for (i = 0, j = 0; (buf[j] = buf[i]); j += !isspace(buf[i++]));
+}
 
 // -------------------------
 
