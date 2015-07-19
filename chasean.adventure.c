@@ -203,6 +203,14 @@ void build_rooms() {
         fclose(f);
     }
 }
+
+void reset() {
+    start_room = 0;
+    end_room = 0;
+    int i;
+    for (i = 0; i < NUMBER_OF_ROOMS; i++)
+        room_connections_sizes[i] = 0;
+}
 // def enter_room(room_name):
 //     global steps
 //     dir_name = dir_name_format % os.getpid()
