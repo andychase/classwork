@@ -147,7 +147,7 @@ void build_room_connections() {
     }
 }
 
-void build_a_room(FILE *f, const char *the_dir_name, const char *room_name, enum RoomType room_type) {
+void build_a_room(FILE *f, const char *room_name, enum RoomType room_type) {
     fprintf(f, room_file_format_header, room_name);
     const char **const connections = room_connections[room_name_to_room_index(room_name)];
     int connections_number = room_connections_sizes[room_name_to_room_index(room_name)];
@@ -179,7 +179,7 @@ void build_rooms() {
             room_type = START_ROOM;
         else if (i == end_room)
             room_type = END_ROOM;
-        build_a_room(f, dir_name, room_names[i], room_type);
+        build_a_room(f, room_names[i], room_type);
         fclose(f);
     }
 }
