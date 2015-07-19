@@ -48,7 +48,7 @@ enum RoomType {
 const char *room_types[] = {"MID_ROOM", "START_ROOM", "END_ROOM"};
 
 //
-const char *room_names[] = {"PLUGH", "PLOVER", "twisty", "Zork", "Crowther", "Dungeon"};
+const char *room_names[] = {"PLUGH", "PLOVER", "twisty", "Zork", "Crowther", "Dungeon", "YA"};
 
 #define NUMBER_OF_ROOMS 7
 //
