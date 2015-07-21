@@ -1,0 +1,157 @@
+#!/bin/bash
+# stats, by Andy Chase
+# For OS I (CS_344_400_U2015)
+#
+
+# The trap command makes sure that the process
+#   file is cleaned up on completion
+trap "rm -f $$; exit 1" INT HUP TERM
+
+
+# ----------------
+# Helper functions
+# ----------------
+
+# Error messages
+
+usage() {
+	>&2 echo "./stats {-rows|-cols} [file]"
+	exit 1
+}
+
+nofile() {
+	>&2 echo "stats: cannot read $1"
+	exit 1
+}
+
+cantread() {
+	>&2 echo "./stats: cannot read file3"
+	exit 1
+}
+
+avgmedrow () {
+	# Calculate average by suming row and dividing
+	sum=$(tr ' ' '+' <<< "$@" | bc)
+	cols=$(tr ' ' '\n' <<< "$@" | wc -l)
+	avg=$(echo "$sum" / $cols | bc -l)
+	avg=$(echo "($avg + 0.5) / 1" | bc)
+
+	# Take median by finding number of columns and picking mid of sorted row
+	even=$(echo "$cols % 2" | bc)
+	mid=$(echo "($cols / 2) + $even" | bc)
+	if [ $even -eq 1 ]; then
+		median=$(tr ' ' '\n' <<< "$@" | sort -g | head "-$mid" | tail -1 )
+	else
+		# According to specification, take larger of the two
+		mid_1=$(echo $mid + 1 | bc)
+		median=$(tr ' ' '\n' <<< "$@" | sort -g | head "-$mid_1" | tail -1 )
+	fi
+	
+	echo "$avg	$median"
+}
+
+avgmedcols () {
+	# Average
+	sum=$(cut -f "$1" < "$2" | paste -s -d+ - | bc)
+	cols=$(wc -l < "$2")
+	avg=$(echo "$sum" / $cols | bc -l)
+	avg=$(echo "($avg + 0.5) / 1" | bc)
+
+	# Median
+	even=$(echo "$cols % 2" | bc)
+	mid=$(echo "($cols / 2) + $even" | bc)
+	if [ $even -eq 1 ]; then
+		median=$(cut -f "$1" < "$2" | sort -g | head "-$mid" | tail -1 )
+	else
+		mid_1=$(echo $mid + 1 | bc)
+		median=$(cut -f "$1" < "$2" | sort -g | head "-$mid_1" | tail -1 )
+	fi
+	avgs+=($avg)
+	meds+=($median)
+}
+
+rows() {
+	echo "Average	Median"
+	if [[ -n $1 ]]
+	then
+		while read line
+		do
+			avgmedrow $line
+		done < $1
+	else
+		while read line
+		do
+			avgmedrow $line
+		done
+	fi
+}
+
+cols () {
+	# Because of all of the various operations
+	# we are going to be doing it makes sense to
+	# buffer stdin to a file for use
+	if [[ -n $1 ]]
+	then
+		lines=$1
+	else
+		cat > $$
+		lines=$$
+	fi
+	# Find number of columns based on word count so that
+	# the tool works properly when there are 0 columns as well
+	# (Counting spaces and adding 1 doen't work well with 0 columns)
+	columns=$(head -1 < $lines | wc -w)
+	avgs=()
+	meds=()
+	if [ $columns -gt 0 ]; then
+		for i in `seq 1 $columns`
+		do
+			avgmedcols $i $lines
+		done < "$lines"
+	fi
+	echo "Averages:"
+	printf '%s	' "${avgs[@]}"
+	echo
+	echo "Medians:"
+	printf '%s	' "${meds[@]}"
+	echo
+}
+
+#
+#
+# Main
+#
+#
+
+# First we check number of arguments
+# and if there are two the file must be valid
+# and readable (in case permissions are wrong)
+if [[ "$#" == 0 ]]; then
+	usage
+elif [[ "$#" -gt 2 ]]; then
+	usage
+elif [[ "$#" == 1 ]]; then
+	true
+elif [ "$#" == 2 ] && [ -e $2 ]; then
+	if [ -r $2 ]; then
+		file=$2
+	else
+		cantread
+	fi
+else
+	nofile $2
+fi
+
+# Now we check args for the either columns or row mode
+if [[ $1 == -c* ]]; then
+	cols $file
+elif [[ $1 == -r* ]];  then
+	rows $file
+else
+	usage
+fi
+
+# Cleanup
+if [ -e "$$" ]; then
+	rm -f "$$"
+fi
