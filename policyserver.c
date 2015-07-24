@@ -7,6 +7,7 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define MAX_BUFFER_SIZE      1028
 
@@ -16,6 +17,7 @@ const char *quitMsg = "\\quit";
 size_t quitMsgSize = 6; // String size + \0
 const char *usage = "Usage: chanserv [port #]";
 int portNumber = 8080;
+const char *hostHandle = "SERV> ";
 
 void signal_callback_handler(int signalNumber) {
     printf("Caught signal %d, cleaning up\n", signalNumber);
@@ -65,15 +67,25 @@ int main(int argc, char *argv[]) {
     struct sockaddr_in client_address;
     socklen_t addressLength = sizeof(client_address);
     int clientFd;
+    ssize_t receiveSuccess;
     while (1) {
         /* --- Accept a client --- */
         clientFd = accept(socketFd, (struct sockaddr *) &client_address, &addressLength);
+        receiveSuccess = 1;
 
-        /* --- Receive --- */
-        recv(clientFd, buffer, MAX_BUFFER_SIZE, 0);
+        while (receiveSuccess != 0 && !strstr(buffer,quitMsg)) {
+            /* --- Receive --- */
+            receiveSuccess = recv(clientFd, buffer, MAX_BUFFER_SIZE, 0);
 
-        /* --- Send --- */
-        send(clientFd, quitMsg, quitMsgSize, 0);
+            /* --- Msg --- */
+            printf("%s", hostHandle);
+            fflush(stdout);
+
+            fgets(buffer, MAX_BUFFER_SIZE, stdin);
+            /* --- Send --- */
+            send(clientFd, quitMsg, quitMsgSize, 0);
+        }
+        buffer[0] = '\0';
 
         /* --- Close ---*/
         close(clientFd);
