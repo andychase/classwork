@@ -1,8 +1,9 @@
-#include <sys/cdefs.h>/* Chasean / CS 372 / chatserv
+/* Chasean / CS 372 / chatserv
  * References used:
  * - My Flash Policy Server: https://github.com/andychase/FlashPolicyServer
  * - Signal tutorial: http://www.yolinux.com/TUTORIALS/C++Signals.html
 */
+#include <sys/cdefs.h>
 #include <stdio.h>
 #include <arpa/inet.h>
 #include <unistd.h>
