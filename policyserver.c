@@ -18,8 +18,9 @@ const char *usage = "Usage: chanserv [port #]";
 int portNumber = 8080;
 
 void signal_callback_handler(int signalNumber) {
+    printf("Caught signal %d, cleaning up\n", signalNumber);
     close(socketFd);
-    exit(signalNumber);
+    exit(0);
 }
 
 
@@ -59,6 +60,7 @@ int main(int argc, char *argv[]) {
         perror("socket--listen");
         return 1;
     }
+    printf("Starting chatserv on port %d\n", portNumber);
 
     struct sockaddr_in client_address;
     socklen_t addressLength = sizeof(client_address);
