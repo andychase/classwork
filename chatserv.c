@@ -52,6 +52,9 @@ void *writeConsoleToSocket(void __unused *_) {
             if (!readFromConsoleSuccess)
                 break;
             /* --- Send --- */
+            sendSuccess = send(clientFd, hostHandle, strlen(hostHandle), 0);
+            if (!sendSuccess)
+                break;
             sendSuccess = send(clientFd, inputBuffer, strlen(inputBuffer), 0);
         }
         // If user wrote the quit message, close socket
@@ -81,7 +84,6 @@ void *readSocketToConsole(void __unused *_) {
         inputBuffer[0] = '\0';
         printf("\n%s\n", "Client disconnected");
     }
-
 }
 
 int main(int argc, char *argv[]) {
