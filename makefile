@@ -1,2 +1,2 @@
 build:
-	gcc -O3 -pthread policyserver.c -o policyserver
+	gcc -pthread chatserv.c -o chatserv
