@@ -78,7 +78,8 @@ void *readSocketToConsole(void __unused *_) {
         while (receiveSuccess != 0) {
             /* --- Receive --- */
             receiveSuccess = recv(clientFd, inputBuffer, BUFFER_SIZE, 0);
-            inputBuffer[receiveSuccess] = '\0';
+            if (receiveSuccess < BUFFER_SIZE)
+                inputBuffer[receiveSuccess] = '\0';
             /* --- Print --- */
             printf("\n%s%s", inputBuffer, hostHandle);
             fflush(stdout);
