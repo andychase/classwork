@@ -1,61 +1,36 @@
-# Flash Policy Server
+# chatserv.c & chatclient.py
 
-FINALLY a blazing fast, simple C Flash Policy server for a simple problem with emphasis on as little memory and highest speed as possible.
+How to compile chatserv:
 
-## How fast? 
+    make
 
-    Concurrency Level:      1
-    Time taken for tests:   28.226 seconds
-    Complete requests:      100000
-    Failed requests:        0
-    Write errors:           0
-    Total transferred:      25000000 bytes
-    HTML transferred:       0 bytes
-    Requests per second:    3542.88 [#/sec] (mean)
-    Time per request:       0.282 [ms] (mean)
-    Time per request:       0.282 [ms] (mean, across all concurrent requests)
-    Transfer rate:          864.96 [Kbytes/sec] received
-    
-    
-    Concurrency Level:      1000
-    Time taken for tests:   80.562 seconds
-    Complete requests:      33157
-    Failed requests:        0
-    Write errors:           2
-    Total transferred:      8455500 bytes
-    HTML transferred:       0 bytes
-    Requests per second:    411.57 [#/sec] (mean)
-    Time per request:       2429.701 [ms] (mean)
-    Time per request:       2.430 [ms] (mean, across all concurrent requests)
-    Transfer rate:          102.50 [Kbytes/sec] received
+How to run chatserv:
 
-## Installation
+    ./chatserv [port to run chatserv on]
 
-1. clone or download zip
-1. enter directory
-2. make
-3. chmod a+xX (if needed)
-4. sudo ./policyserver &
+How to run chatclient.py
 
-## Licence
-The MIT License (MIT)
+    python chatclient.py [hostname to connect to] [port to connect to]
 
-Copyright (c) 2013 Andrew Chase
+How to use chatserv:
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+* This program is used through a terminal. On Mac OS X use the Terminal.app program,
+  or on unix-type systems use your favorite terminal emulator like xterm
+    * This software is only written for posix systems, cygwin is available if you are on windows.
+* In the same directory as the software, compile and run `chatserv` (see above)
+* Chatserv will wait for a client to connect to it
+* Once a client is connected, you can type messages in at any time
+    * Note if a message comes in while you are still typing, the first part of your
+      message will still be sent when you press enter. You can still also erase with backspace
+      but your screen won't display the characters erasing.
+* Type \quit at the prompt at any time to close the connection with the client
+* End the program with control+c
 
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
+How to use chatclient.py:
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
+* Open up a terminal (see above)
+* Run: `python chatclient.py [hostname to connect to] [port to connect to]`
+* Enter in your chat handle to be used to identify your messages. 
+  You cannot change it except by re-connecting.
+* Type in your message at the prompt
+* Type \quit at the prompt to close the connection with the server and quit the program
