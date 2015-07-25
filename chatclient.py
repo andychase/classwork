@@ -31,16 +31,12 @@ def write_console_to_socket(connection, handle):
 
 def read_socket_to_console(connection, handle):
     while True:
-        try:
             data = connection.recv(BUFFER_SIZE)
-        except (EOFError, ValueError):
-            print('*** Connection closed ***')
-            return
-        else:
-            if data:
-                sys.stdout.write("\n" + data.decode('utf-8') + handle)
+            if not data:
+                print('*** Connection closed ***')
+                return
             else:
-                sys.stdout.flush()
+                sys.stdout.write("\n" + data.decode('utf-8') + handle)
 
 
 def main(hostname, port):
