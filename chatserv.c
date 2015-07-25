@@ -16,7 +16,7 @@
 int portNumber = 8080;
 const char *quitMsg = "\\quit";
 
-const char *usage = "Usage: chanserv [port #]";
+const char *usage = "Usage: chanserv [port #]\n";
 const char *hostHandle = "SERV> ";
 
 int socketFd;
@@ -78,6 +78,7 @@ void *readSocketToConsole(void __unused *_) {
         while (receiveSuccess != 0) {
             /* --- Receive --- */
             receiveSuccess = recv(clientFd, inputBuffer, BUFFER_SIZE, 0);
+            inputBuffer[receiveSuccess] = '\0';
             /* --- Print --- */
             printf("\n%s%s", inputBuffer, hostHandle);
             fflush(stdout);
