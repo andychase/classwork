@@ -28,6 +28,13 @@ int pipes[2][2];
 #define SERVER_SEND 0
 #define CLIENT_RECEIVE 1
 
+// For writeConsoleToSocket only (initialized here to save stack space)
+char writeConsoleBuffer[BUFFER_SIZE];
+char writeConsoleTmpBuffer[BUFFER_SIZE];
+
+// For readSocketToConsole only
+char readSocketBuffer[BUFFER_SIZE];
+
 void signal_callback_handler(int signalNumber) {
     printf("Caught signal %d, cleaning up\n", signalNumber);
     close(socketFd);
@@ -38,37 +45,37 @@ void *writeConsoleToSocket(void __unused *_) {
     int clientFd;
     ssize_t sendSuccess;
     char *readFromConsoleSuccess;
-    char inputBuffer[BUFFER_SIZE];
 
     while (1) {
         /* --- Wait for, and recieve a client ---- */
         read(pipes[SERVER_SEND][READ], &clientFd, sizeof(int));
 
         sendSuccess = 1;
-        while (sendSuccess > 0 && !strstr(inputBuffer, quitMsg)) {
+        while (sendSuccess > 0 && !strstr(writeConsoleBuffer, quitMsg)) {
             /* --- Print prompt --- */
             printf("%s", hostHandle);
+            fflush(stdout);
             /* --- Read message from standard input --- */
-            readFromConsoleSuccess = fgets(inputBuffer, BUFFER_SIZE, stdin);
+            readFromConsoleSuccess = fgets(writeConsoleBuffer, BUFFER_SIZE, stdin);
             if (!readFromConsoleSuccess)
                 break;
+            /* --- Add handle to message --- */
+            strcpy(writeConsoleTmpBuffer, hostHandle);
+            strcat(writeConsoleTmpBuffer, writeConsoleBuffer);
+
             /* --- Send --- */
-            sendSuccess = send(clientFd, hostHandle, strlen(hostHandle), 0);
-            if (!sendSuccess)
-                break;
-            sendSuccess = send(clientFd, inputBuffer, strlen(inputBuffer), 0);
+            sendSuccess = send(clientFd, writeConsoleTmpBuffer, strlen(writeConsoleTmpBuffer), 0);
         }
         // If user wrote the quit message, close socket
-        if (strstr(inputBuffer, quitMsg))
+        if (strstr(writeConsoleBuffer, quitMsg))
             close(clientFd);
-        inputBuffer[0] = '\0';
+        writeConsoleBuffer[0] = '\0';
     }
 }
 
 void *readSocketToConsole(void __unused *_) {
     int clientFd;
     ssize_t receiveSuccess;
-    char inputBuffer[BUFFER_SIZE];
 
     while (1) {
         /* --- Wait for, and recieve a client ---- */
@@ -77,14 +84,14 @@ void *readSocketToConsole(void __unused *_) {
         receiveSuccess = 1;
         while (receiveSuccess != 0) {
             /* --- Receive --- */
-            receiveSuccess = recv(clientFd, inputBuffer, BUFFER_SIZE, 0);
+            receiveSuccess = recv(clientFd, readSocketBuffer, BUFFER_SIZE, 0);
             if (receiveSuccess < BUFFER_SIZE)
-                inputBuffer[receiveSuccess] = '\0';
+                readSocketBuffer[receiveSuccess] = '\0';
             /* --- Print --- */
-            printf("\n%s%s", inputBuffer, hostHandle);
+            printf("\n%s%s", readSocketBuffer, hostHandle);
             fflush(stdout);
         }
-        inputBuffer[0] = '\0';
+        readSocketBuffer[0] = '\0';
         printf("\n%s\n", "Client disconnected");
     }
 }
