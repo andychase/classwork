@@ -1,0 +1,209 @@
+@import 'variables';
+@import 'bootstrap';
+@import 'bootswatch';
+
+// Main Styling
+
+html, body {
+  height: 100%;
+}
+
+.container.main-container {
+  min-height: 100%;
+}
+
+// Navigation Styling Text
+
+.navbar-header-text {
+
+}
+
+#rad-montage-main-header {
+  display: inline-block;
+  font-family: "Adobe Gothic Std", "adobe-gothic-std", sans-serif;
+  margin-top: 0;
+  font-size: 16pt;
+  margin-right: 30px;
+  color: white;
+  text-shadow: 0 1px 0 black;
+  &:hover, &:active, &:focus {
+    text-decoration: none;
+  }
+}
+
+.navbar-main-logo {
+  padding-bottom: 0;
+  padding-top: 7px;
+}
+
+.navbar-watch-page.navbar {
+  margin-bottom: 5px;
+}
+
+.montageTitle {
+  margin-top: 0;
+}
+
+.montage-manual-link {
+  margin-left: 20px;
+}
+
+.nav-about-text {
+  color: white !important;
+  opacity: .9;
+  font-style: italic;
+}
+
+ul.nav.navbar-nav {
+  a {
+    &:hover {
+      background-color: mix($brand-primary, #fff, 95%);
+    }
+  }
+}
+
+.footer {
+  width: 100%;
+  height: 40px;
+  background-color: $brand-primary;
+}
+
+// Make styling
+
+.montageStart, .montageEnd {
+  width: 80px !important;
+}
+
+.container.main-container {
+  margin-bottom: 40px;
+}
+
+#montage-manual-link {
+  margin-left: 20px;
+}
+
+.montage-row {
+  padding-bottom: 10px;
+  padding-top: 10px;
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.montage-form-group .form-group label {
+  color: #949494;
+  margin-left: 8px;
+  margin-right: 2px;
+  transition: color 200ms;
+}
+
+.montage-form-group .form-group.has-success label {
+  color: black;
+}
+
+#montage-link {
+  height: 45px;
+  #montage-link-placeholder {
+    font-size: 10pt;
+    color: #a7a7a7;
+    font-style: italic;
+  }
+}
+
+#social-buttons-area {
+  overflow: hidden;
+}
+
+// Explore Styling
+
+.explore-intro-text {
+  text-align: center;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.explore-video-block {
+  display: inline-block;
+  border: 2px solid #ccc;
+  width: 324px;
+  vertical-align: top;
+  border-radius: 4px;
+  padding: 10px;
+  margin: 10px;
+
+  .explore-explicit-warning {
+    color: red;
+    font-size: 6pt;
+    border: 1px solid red;
+    text-transform: uppercase;
+    position: relative;
+    bottom: 1px;
+    padding: 1px 2px 1px 1px;
+  }
+
+  .explore-video-thumb {
+    display: block;
+    width: 300px;
+    height: 169px;
+    background-color: #ffffff;
+  }
+
+  .explore-video-title {
+    display: block;
+    font-size: 13pt;
+    padding-top: 10px;
+    font-weight: bold;
+  }
+
+  .explore-video-video-count {
+    color: grey;
+    font-size: 10pt;
+  }
+}
+
+.explore-featured-howto {
+  font-style: italic;
+  display: block;
+  text-align: center;
+  margin-top: 50px;
+  color: #686868;
+}
+
+// Watch video page
+
+.watch–controls {
+  width: 100%;
+  margin-top: 10px;
+  button {
+    max-height: 45px;
+  }
+  .fa {
+    font-size: 16pt;
+  }
+
+  .btn:focus {
+    outline: none;
+    border-color: #95a3a6;
+    background: $btn-default-bg;
+  }
+  .btn:focus {
+    outline: none;
+    border-color: #95a3a6;
+    background: $btn-default-bg;
+  }
+  .btn:hover {
+    background-color: #798b8f;
+    border-color: #74868a;
+  }
+}
+
+.watch-montage-header {
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+.watch-montage-container {
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  padding: 10px;
+  box-shadow: 0 1px 3px -2px rgb(0, 0, 0);
+}
