@@ -180,15 +180,21 @@ void *performCommandConnection(void __unused *_) {
                 struct DataConnectionMessage msg = {
                     .client = clientFd, .address = requestMessage.address, .port = clientPort, .list = 1};
                 write(pipes[DATA_CONNECTION][WRITE], &msg, sizeof(struct DataConnectionMessage));
+                close(clientFd);
+                break;
             } else if (strstr(readSocketBuffer, "-g ")) {
                 // Send file
                 const char *fileToSend = strdup(readSocketBuffer);
                 struct DataConnectionMessage msg = {
                     .client = clientFd, .address = requestMessage.address, .port = clientPort, .fileToSend=fileToSend};
                 write(pipes[DATA_CONNECTION][WRITE], &msg, sizeof(struct DataConnectionMessage));
+                close(clientFd);
+                break;
             } else {
                 // Return bad message
                 send(clientFd, badCommandMsg, strlen(badCommandMsg), 0);
+                close(clientFd);
+                break;
             }
         }
         readSocketBuffer[0] = '\0';
