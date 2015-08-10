@@ -1,2 +1,2 @@
 build:
-	gcc -pthread chatserv.c -o chatserv
+	gcc -pthread ftserver.c -o ftserver
