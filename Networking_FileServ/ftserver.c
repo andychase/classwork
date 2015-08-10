@@ -3,6 +3,7 @@
  * - My Flash Policy Server: https://github.com/andychase/FlashPolicyServer
  * - Signal tutorial: http://www.yolinux.com/TUTORIALS/C++Signals.html
  * - The previous chat client/server project
+ * - http://www.binarytides.com/socket-programming-c-linux-tutorial/
 */
 #include <sys/cdefs.h>
 #include <stdio.h>
@@ -12,6 +13,8 @@
 #include <string.h>
 #include <pthread.h>
 #include <dirent.h>
+#include <sys/fcntl.h>
+#include <sys/errno.h>
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wmissing-noreturn"
@@ -21,6 +24,7 @@ int portNumber = 8080;
 
 const char *usage = "Usage: ftserver [port #]\n";
 const char *badCommandMsg = "That command was not found\n";
+const char *badFileMsg = "That file was not found or an error occured while opening it\n";
 
 int socketFd;
 
@@ -33,6 +37,8 @@ int pipes[2][2];
 
 struct DataConnectionMessage {
     int client;
+    struct in_addr address;
+    int port;
     int list;
     const char *fileToSend;
 };
@@ -52,10 +58,10 @@ void signal_callback_handler(int signalNumber) {
 
 
 // ---- Vendor Functions ----
-void readFromDir(const char *directory, char* buffer) {
+void readFromDir(char *buffer) {
     DIR *dir;
     struct dirent *ent;
-    if ((dir = opendir(directory)) != NULL) {
+    if ((dir = opendir(".")) != NULL) {
         /* print all the files and directories within directory */
         while ((ent = readdir(dir)) != NULL) {
             strcat(buffer, ent->d_name);
@@ -67,54 +73,123 @@ void readFromDir(const char *directory, char* buffer) {
     }
 }
 
+// --- End Vendor functions ---
+
+void copyFile(int from, int to) {
+    size_t bytesRead;
+    char* buf[BUFSIZ];
+    while (1) {
+        bytesRead = (size_t) read(from, buf, sizeof(buf));
+        if (!bytesRead)
+            return;
+        write(to, buf, bytesRead);
+    }
+}
+
+int openListenSocket(struct DataConnectionMessage req) {
+    int socket_desc;
+    struct sockaddr_in server;
+
+    socket_desc = socket(AF_INET, SOCK_STREAM, 0);
+    if (socket_desc == -1) {
+        printf("Could not create socket");
+    }
+
+    server.sin_addr.s_addr = req.address.s_addr;
+    server.sin_family = AF_INET;
+    server.sin_port = htons(req.port);
+
+    if (connect(socket_desc, (struct sockaddr *) &server, sizeof(server)) < 0) {
+        puts("connect error\n");
+        return -1;
+    } else {
+        return socket_desc;
+    }
+}
+
 
 void *performDataConnection(void __unused *_) {
     struct DataConnectionMessage dataConnectionMessage;
-    ssize_t sendSuccess;
-    char *readFromConsoleSuccess;
 
     while (1) {
         /* --- Wait for, and recieve a client ---- */
         read(pipes[DATA_CONNECTION][READ], &dataConnectionMessage, sizeof(struct DataConnectionMessage));
 
+        /* --- If -l sent, send dir listing --- */
         if (dataConnectionMessage.list) {
             writeConsoleTmpBuffer[0] = '\0';
-            readFromDir(".", writeConsoleTmpBuffer);
-            sendSuccess = send(dataConnectionMessage.client, writeConsoleTmpBuffer, strlen(writeConsoleTmpBuffer), 0);
+            readFromDir(writeConsoleTmpBuffer);
+            int socket = openListenSocket(dataConnectionMessage);
+            send(socket, writeConsoleTmpBuffer, strlen(writeConsoleTmpBuffer), 0);
+            close(socket);
+        } else {
+            /* --- Otherwise check file --- */
+            const char* fileToSend = dataConnectionMessage.fileToSend+3;
+            int fileFd = open(fileToSend, O_RDONLY);
+            free((void *) dataConnectionMessage.fileToSend);
+            if (fileFd != -1) {
+                int socket = openListenSocket(dataConnectionMessage);
+                copyFile(fileFd, socket);
+                close(socket);
+                if (errno) {
+                    strcat(writeConsoleBuffer, strerror(errno));
+                    strcat(writeConsoleBuffer, "\n");
+                }
+                send(dataConnectionMessage.client, writeConsoleBuffer, strlen(writeConsoleBuffer), 0);
+            } else {
+                strcat(writeConsoleBuffer, badFileMsg);
+                strcat(writeConsoleBuffer, "\n");
+                strcat(writeConsoleBuffer, strerror(errno));
+                strcat(writeConsoleBuffer, "\n");
+                send(dataConnectionMessage.client, writeConsoleBuffer, strlen(writeConsoleBuffer), 0);
+            }
         }
-
-        /* --- Send --- */
-//        sendSuccess = send(dataConnectionMessage.client, writeConsoleTmpBuffer, strlen(writeConsoleTmpBuffer), 0);
         writeConsoleBuffer[0] = '\0';
     }
 }
 
 void *performCommandConnection(void __unused *_) {
+    struct DataConnectionMessage requestMessage;
     int clientFd;
+    int clientPort;
     ssize_t receiveSuccess;
 
     while (1) {
         /* --- Wait for, and recieve a client ---- */
-        read(pipes[COMMAND_CONNECTION][READ], &clientFd, sizeof(int));
+        read(pipes[COMMAND_CONNECTION][READ], &requestMessage, sizeof(struct DataConnectionMessage));
+        clientFd = requestMessage.client;
 
+        clientPort = 0;
         receiveSuccess = 1;
         while (receiveSuccess != 0) {
             /* --- Receive --- */
             receiveSuccess = recv(clientFd, readSocketBuffer, BUFFER_SIZE, 0);
+            // Remove newline
+            if (readSocketBuffer[strlen(readSocketBuffer)-1] == '\n')
+                readSocketBuffer[strlen(readSocketBuffer)-1] = '\0';
+            // If partial response received, terminate any extra
             if (receiveSuccess < BUFFER_SIZE)
                 readSocketBuffer[receiveSuccess] = '\0';
-            if (strstr(readSocketBuffer, "-l")) {
-                struct DataConnectionMessage msg = {.client = clientFd, .list = 1, .fileToSend=NULL};
+
+            // Sort Commands
+            if (clientPort < 1) {
+                // First response should be the data port
+                clientPort = atoi(readSocketBuffer);
+            } else if (strstr(readSocketBuffer, "-l")) {
+                // List
+                struct DataConnectionMessage msg = {
+                    .client = clientFd, .address = requestMessage.address, .port = clientPort, .list = 1};
                 write(pipes[DATA_CONNECTION][WRITE], &msg, sizeof(struct DataConnectionMessage));
             } else if (strstr(readSocketBuffer, "-g ")) {
-                const char *fileToSend = malloc(strlen(readSocketBuffer) - 3 + 1);
-                struct DataConnectionMessage msg = {.client = clientFd, .list = 0, .fileToSend=fileToSend};
+                // Send file
+                const char *fileToSend = strdup(readSocketBuffer);
+                struct DataConnectionMessage msg = {
+                    .client = clientFd, .address = requestMessage.address, .port = clientPort, .fileToSend=fileToSend};
                 write(pipes[DATA_CONNECTION][WRITE], &msg, sizeof(struct DataConnectionMessage));
             } else {
+                // Return bad message
                 send(clientFd, badCommandMsg, strlen(badCommandMsg), 0);
             }
-            /* --- Print --- */
-            fflush(stdout);
         }
         readSocketBuffer[0] = '\0';
         printf("\n%s\n", "Client disconnected");
@@ -175,7 +250,11 @@ int main(int argc, char *argv[]) {
         clientFd = accept(socketFd, (struct sockaddr *) &client_address, &addressLength);
         printf("%s\n", "Client connected");
         /* --- Send client to handler thread --- */
-        write(pipes[COMMAND_CONNECTION][WRITE], &clientFd, sizeof(int));
+        struct DataConnectionMessage msg = {
+            .client = clientFd,
+            .address = client_address.sin_addr
+        };
+        write(pipes[COMMAND_CONNECTION][WRITE], &msg, sizeof(struct DataConnectionMessage));
     }
 }
 
