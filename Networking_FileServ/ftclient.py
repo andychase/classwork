@@ -14,11 +14,7 @@ file_save_name = ""
 
 
 def write_console_to_socket(server_socket):
-    server_socket.settimeout(1)
-    try:
-        (client_socket, address) = server_socket.accept()
-    except socket.timeout:
-        return
+    (client_socket, address) = server_socket.accept()
     if list_mode:
         while 1:
             client_buffer = client_socket.recv(BUFFER_SIZE)
@@ -49,7 +45,7 @@ def main(server_host, server_port, command, filename="", data_port=""):
         file_save_name = filename
         command += " " + filename
 
-    # Start data server
+    # Start data socket
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.bind(('', int(data_port)))
     server_socket.listen(1)
@@ -58,9 +54,8 @@ def main(server_host, server_port, command, filename="", data_port=""):
     # Send command to ftserver
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.connect((server_host, int(server_port)))
-    s.settimeout(1)
-    s.send(data_port)
-    s.send(command)
+    s.sendall(data_port)
+    s.sendall(command)
 
     write_console_to_socket(server_socket)
     try:
