@@ -1,4 +1,4 @@
-/* Chasean / CS 372 / chatserv
+/* Chasean / CS 372 / ftserver
  * References used:
  * - My Flash Policy Server: https://github.com/andychase/FlashPolicyServer
  * - Signal tutorial: http://www.yolinux.com/TUTORIALS/C++Signals.html
@@ -143,7 +143,7 @@ int main(int argc, char *argv[]) {
         perror("socket--listen");
         return 1;
     }
-    printf("Starting chatserv on port %d\n", portNumber);
+    printf("Starting ftserver on port %d\n", portNumber);
 
     struct sockaddr_in client_address;
     socklen_t addressLength = sizeof(client_address);
