@@ -11,16 +11,16 @@
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
+#include <dirent.h>
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wmissing-noreturn"
 #define BUFFER_SIZE      1028
 
 int portNumber = 8080;
-const char *quitMsg = "\\quit";
 
 const char *usage = "Usage: ftserver [port #]\n";
-const char *hostHandle = "SERV> ";
+const char *badCommandMsg = "That command was not found\n";
 
 int socketFd;
 
@@ -28,8 +28,14 @@ int socketFd;
 int pipes[2][2];
 #define READ 0
 #define WRITE 1
-#define SERVER_SEND 0
-#define CLIENT_RECEIVE 1
+#define COMMAND_CONNECTION 0
+#define DATA_CONNECTION 1
+
+struct DataConnectionMessage {
+    int client;
+    int list;
+    const char *fileToSend;
+};
 
 // For writeConsoleToSocket only (initialized here to save stack space)
 char writeConsoleBuffer[BUFFER_SIZE];
@@ -44,45 +50,52 @@ void signal_callback_handler(int signalNumber) {
     exit(0);
 }
 
-void *writeConsoleToSocket(void __unused *_) {
-    int clientFd;
+
+// ---- Vendor Functions ----
+void readFromDir(const char *directory, char* buffer) {
+    DIR *dir;
+    struct dirent *ent;
+    if ((dir = opendir(directory)) != NULL) {
+        /* print all the files and directories within directory */
+        while ((ent = readdir(dir)) != NULL) {
+            strcat(buffer, ent->d_name);
+            strcat(buffer, "\n");
+        }
+        closedir(dir);
+    } else {
+        /* could not open directory */
+    }
+}
+
+
+void *performDataConnection(void __unused *_) {
+    struct DataConnectionMessage dataConnectionMessage;
     ssize_t sendSuccess;
     char *readFromConsoleSuccess;
 
     while (1) {
         /* --- Wait for, and recieve a client ---- */
-        read(pipes[SERVER_SEND][READ], &clientFd, sizeof(int));
+        read(pipes[DATA_CONNECTION][READ], &dataConnectionMessage, sizeof(struct DataConnectionMessage));
 
-        sendSuccess = 1;
-        while (sendSuccess > 0 && !strstr(writeConsoleBuffer, quitMsg)) {
-            /* --- Print prompt --- */
-            printf("%s", hostHandle);
-            fflush(stdout);
-            /* --- Read message from standard input --- */
-            readFromConsoleSuccess = fgets(writeConsoleBuffer, BUFFER_SIZE, stdin);
-            if (!readFromConsoleSuccess)
-                break;
-            /* --- Add handle to message --- */
-            strcpy(writeConsoleTmpBuffer, hostHandle);
-            strcat(writeConsoleTmpBuffer, writeConsoleBuffer);
-
-            /* --- Send --- */
-            sendSuccess = send(clientFd, writeConsoleTmpBuffer, strlen(writeConsoleTmpBuffer), 0);
+        if (dataConnectionMessage.list) {
+            writeConsoleTmpBuffer[0] = '\0';
+            readFromDir(".", writeConsoleTmpBuffer);
+            sendSuccess = send(dataConnectionMessage.client, writeConsoleTmpBuffer, strlen(writeConsoleTmpBuffer), 0);
         }
-        // If user wrote the quit message, close socket
-        if (strstr(writeConsoleBuffer, quitMsg))
-            close(clientFd);
+
+        /* --- Send --- */
+//        sendSuccess = send(dataConnectionMessage.client, writeConsoleTmpBuffer, strlen(writeConsoleTmpBuffer), 0);
         writeConsoleBuffer[0] = '\0';
     }
 }
 
-void *readSocketToConsole(void __unused *_) {
+void *performCommandConnection(void __unused *_) {
     int clientFd;
     ssize_t receiveSuccess;
 
     while (1) {
         /* --- Wait for, and recieve a client ---- */
-        read(pipes[CLIENT_RECEIVE][READ], &clientFd, sizeof(int));
+        read(pipes[COMMAND_CONNECTION][READ], &clientFd, sizeof(int));
 
         receiveSuccess = 1;
         while (receiveSuccess != 0) {
@@ -90,8 +103,17 @@ void *readSocketToConsole(void __unused *_) {
             receiveSuccess = recv(clientFd, readSocketBuffer, BUFFER_SIZE, 0);
             if (receiveSuccess < BUFFER_SIZE)
                 readSocketBuffer[receiveSuccess] = '\0';
+            if (strstr(readSocketBuffer, "-l")) {
+                struct DataConnectionMessage msg = {.client = clientFd, .list = 1, .fileToSend=NULL};
+                write(pipes[DATA_CONNECTION][WRITE], &msg, sizeof(struct DataConnectionMessage));
+            } else if (strstr(readSocketBuffer, "-g ")) {
+                const char *fileToSend = malloc(strlen(readSocketBuffer) - 3 + 1);
+                struct DataConnectionMessage msg = {.client = clientFd, .list = 0, .fileToSend=fileToSend};
+                write(pipes[DATA_CONNECTION][WRITE], &msg, sizeof(struct DataConnectionMessage));
+            } else {
+                send(clientFd, badCommandMsg, strlen(badCommandMsg), 0);
+            }
             /* --- Print --- */
-            printf("\n%s%s", readSocketBuffer, hostHandle);
             fflush(stdout);
         }
         readSocketBuffer[0] = '\0';
@@ -105,10 +127,10 @@ int main(int argc, char *argv[]) {
     /* --- Set up client handler threads ---*/
     pthread_t threads[2];
     // Create pipes for sending clients
-    pipe(pipes[CLIENT_RECEIVE]);
-    pipe(pipes[SERVER_SEND]);
-    pthread_create(&threads[0], NULL, writeConsoleToSocket, NULL);
-    pthread_create(&threads[0], NULL, readSocketToConsole, NULL);
+    pipe(pipes[COMMAND_CONNECTION]);
+    pipe(pipes[DATA_CONNECTION]);
+    pthread_create(&threads[0], NULL, performCommandConnection, NULL);
+    pthread_create(&threads[0], NULL, performDataConnection, NULL);
 
     /* --- Read port from arguments or print usage -- */
     if (argc < 2 || atoi(argv[1]) == 0) {
@@ -152,9 +174,8 @@ int main(int argc, char *argv[]) {
         /* --- Accept a client --- */
         clientFd = accept(socketFd, (struct sockaddr *) &client_address, &addressLength);
         printf("%s\n", "Client connected");
-        /* --- Send client to handler threads --- */
-        write(pipes[CLIENT_RECEIVE][WRITE], &clientFd, sizeof(int));
-        write(pipes[SERVER_SEND][WRITE], &clientFd, sizeof(int));
+        /* --- Send client to handler thread --- */
+        write(pipes[COMMAND_CONNECTION][WRITE], &clientFd, sizeof(int));
     }
 }
 
