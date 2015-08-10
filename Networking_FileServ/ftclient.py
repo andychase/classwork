@@ -1,7 +1,9 @@
 #!/usr/bin/python
-""" Usage: python ftclient.py [SERVER_HOST] [SERVER_PORT] [COMMAND] [FILENAME] [DATA_PORT]
+""" Usage: python ftclient.py [server to connect] [server port] [-l or -g] [filename if -g] [port for data connection]
+
+References:
 * Other chat client project
-* References: https://docs.python.org/2/howto/sockets.html
+* https://docs.python.org/2/howto/sockets.html
 """
 import socket
 import sys
@@ -67,7 +69,7 @@ def main(server_host, server_port, command, filename="", data_port=""):
 
 
 if __name__ in "__main__":
-    if len(sys.argv) < 1:
+    if len(sys.argv) < 3:
         print(__doc__)
     else:
         main(*sys.argv[1:])
