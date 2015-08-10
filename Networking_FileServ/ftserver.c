@@ -5,12 +5,12 @@
  * - The previous chat client/server project
  * - http://www.binarytides.com/socket-programming-c-linux-tutorial/
 */
-#include <sys/cdefs.h>
 #include <stdio.h>
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>
 #include <pthread.h>
 #include <dirent.h>
 #include <sys/fcntl.h>
@@ -77,7 +77,7 @@ void readFromDir(char *buffer) {
 
 void copyFile(int from, int to) {
     size_t bytesRead;
-    char* buf[BUFSIZ];
+    char *buf[BUFSIZ];
     while (1) {
         bytesRead = (size_t) read(from, buf, sizeof(buf));
         if (!bytesRead)
@@ -108,7 +108,7 @@ int openListenSocket(struct DataConnectionMessage req) {
 }
 
 
-void *performDataConnection(void __unused *_) {
+void *performDataConnection(void *_) {
     struct DataConnectionMessage dataConnectionMessage;
 
     while (1) {
@@ -124,7 +124,7 @@ void *performDataConnection(void __unused *_) {
             close(socket);
         } else {
             /* --- Otherwise check file --- */
-            const char* fileToSend = dataConnectionMessage.fileToSend+3;
+            const char *fileToSend = dataConnectionMessage.fileToSend + 3;
             int fileFd = open(fileToSend, O_RDONLY);
             free((void *) dataConnectionMessage.fileToSend);
             if (fileFd != -1) {
@@ -148,7 +148,7 @@ void *performDataConnection(void __unused *_) {
     }
 }
 
-void *performCommandConnection(void __unused *_) {
+void *performCommandConnection(void *_) {
     struct DataConnectionMessage requestMessage;
     int clientFd;
     int clientPort;
@@ -165,8 +165,8 @@ void *performCommandConnection(void __unused *_) {
             /* --- Receive --- */
             receiveSuccess = recv(clientFd, readSocketBuffer, BUFFER_SIZE, 0);
             // Remove newline
-            if (readSocketBuffer[strlen(readSocketBuffer)-1] == '\n')
-                readSocketBuffer[strlen(readSocketBuffer)-1] = '\0';
+            if (readSocketBuffer[strlen(readSocketBuffer) - 1] == '\n')
+                readSocketBuffer[strlen(readSocketBuffer) - 1] = '\0';
             // If partial response received, terminate any extra
             if (receiveSuccess < BUFFER_SIZE)
                 readSocketBuffer[receiveSuccess] = '\0';
