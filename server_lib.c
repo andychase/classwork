@@ -57,9 +57,12 @@ int startServer(char *serverName, int portNumber, void *(*callback)(void *)) {
         clientFd = accept(socketFd, (struct sockaddr *) &client_address, &addressLength);
         printf("%s\n", "Client connected");
         /* --- Process connection in child process --- */
-        if (fork() == 0) {
+        int pid = fork();
+        if (pid == 0) {
             callback((void *) clientFd);
             return 0;
+        } else if (pid == -1){
+            return 1;
         }
     }
 }
