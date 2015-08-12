@@ -1,0 +1,5 @@
+#ifndef PROJECT4_CIPHER_LIB_H
+#define PROJECT4_CIPHER_LIB_H
+void selfTest();
+
+#endif //PROJECT4_CIPHER_LIB_H
