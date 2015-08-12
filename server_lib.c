@@ -19,6 +19,27 @@ void signal_callback_handler(int signalNumber) {
     exit(0);
 }
 
+int openConnectSocket(int port, int *msgBuffer, int *keyBuffer, int size) {
+    int socket_desc;
+    struct sockaddr_in server;
+
+    socket_desc = socket(AF_INET, SOCK_STREAM, 0);
+    if (socket_desc == -1) {
+        printf("Could not create socket");
+    }
+
+    server.sin_addr.s_addr = 0;
+    server.sin_family = AF_INET;
+    server.sin_port = htons(port);
+
+    if (connect(socket_desc, (struct sockaddr *) &server, sizeof(server)) < 0) {
+        puts("connect error\n");
+        return -1;
+    } else {
+        socket_desc;
+    }
+}
+
 int startServer(char *serverName, int portNumber, void *(*callback)(void *)) {
     signal(SIGINT, signal_callback_handler);
 
@@ -61,7 +82,7 @@ int startServer(char *serverName, int portNumber, void *(*callback)(void *)) {
         if (pid == 0) {
             callback((void *) clientFd);
             return 0;
-        } else if (pid == -1){
+        } else if (pid == -1) {
             return 1;
         }
     }
