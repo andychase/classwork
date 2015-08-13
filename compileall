@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+function _compile
+{
+    echo "cc $1"
+    gcc "$1.c" "server_lib.c" "cipher_lib.c" -o "$1" -std=c89 -I. -Wall
+}
+
+_compile otp_enc_d
+_compile otp_enc
+_compile otp_dec_d
+_compile otp_dec
+_compile keygen
