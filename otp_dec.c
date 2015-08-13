@@ -36,6 +36,7 @@ int main(int argc, char **argv) {
             }
         }
 
+        size_t receivedData;
         int socket = openConnectSocket(port);
         if (socket < 1) {
             printf("Error connecting to encryption server.\n");
@@ -52,7 +53,11 @@ int main(int argc, char **argv) {
             keyBytesRead = fread(keyBuffer, 1, msgBytesRead, keyFile);
 
             if (keyBytesRead) {
-                handleServerConnection(socket, 0, keyBuffer, msgBuffer, buffer, msgBytesRead);
+                receivedData = handleServerConnection(socket, 0, keyBuffer, msgBuffer, buffer, msgBytesRead);
+                if (msgBytesRead != receivedData) {
+                    printf("Server terminated the connection");
+                    return 1;
+                }
                 buffer[msgBytesRead] = '\0';
                 printf("%s", buffer);
             }

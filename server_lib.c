@@ -23,7 +23,7 @@ void signal_callback_handler(int signalNumber) {
 
 // --- Socket Utils --- //
 
-void pullFromSocket(int socket, char *buffer, size_t length) {
+size_t pullFromSocket(int socket, char *buffer, size_t length) {
     ssize_t bytesReceived;
     size_t receivedLength = 0;
     while (receivedLength < length) {
@@ -33,6 +33,7 @@ void pullFromSocket(int socket, char *buffer, size_t length) {
         else
             receivedLength += bytesReceived;
     }
+    return receivedLength;
 }
 
 void pushToSocket(int socket, char *buffer, size_t length) {
@@ -70,13 +71,13 @@ int openConnectSocket(int port) {
     }
 }
 
-void handleServerConnection(int clientFd, int encryptionMode,
+size_t handleServerConnection(int clientFd, int encryptionMode,
                             char *keyBuffer, char *msgBuffer, char *resultBuffer, size_t size) {
     char sizeBuf[] = {(char) size, (char) (size_t) encryptionMode};
     pushToSocket(clientFd, sizeBuf, sizeof(char) * 2);
     pushToSocket(clientFd, keyBuffer, size);
     pushToSocket(clientFd, msgBuffer, size);
-    pullFromSocket(clientFd, resultBuffer, size);
+    return pullFromSocket(clientFd, resultBuffer, size);
 }
 
 // ---- Server Functions ---- //
@@ -144,6 +145,7 @@ void handleClient(int clientFd, int encryptionMode, char *buffer, int *resultBuf
         msgAndKeyLength = (size_t) buffer[0];
         isEncrypting = (size_t) buffer[1];
         if (isEncrypting != encryptionMode) {
+            shutdown(clientFd, 2);
             close(clientFd);
             return;
         }
