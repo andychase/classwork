@@ -37,7 +37,7 @@ int main(int argc, char **argv) {
         }
 
         int socket = openConnectSocket(port);
-        if(socket < 1) {
+        if (socket < 1) {
             printf("Error connecting to encryption server.\n");
             return 1;
         }
@@ -45,6 +45,10 @@ int main(int argc, char **argv) {
             msgBytesRead = fread(msgBuffer, 1, BUFSIZ - 1, msgFile);
             if (!msgBytesRead)
                 break;
+            if (msgBuffer[msgBytesRead - 1] == '\n') {
+                msgBuffer[msgBytesRead - 1] = '\0';
+                msgBytesRead -= 1;
+            }
             keyBytesRead = fread(keyBuffer, 1, msgBytesRead, keyFile);
 
             if (keyBytesRead) {
@@ -53,6 +57,7 @@ int main(int argc, char **argv) {
                 printf("%s", buffer);
             }
         }
+        printf("\n");
     } else {
         snprintf(buffer, BUFSIZ, "Error opening msgFile: %s or keyFile: %s", argv[1], argv[2]);
         perror(buffer);
