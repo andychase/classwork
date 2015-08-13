@@ -35,9 +35,21 @@ void pullFromSocket(int socket, char *buffer, size_t length) {
     }
 }
 
+void pushToSocket(int socket, char *buffer, size_t length) {
+    ssize_t bytesSent;
+    size_t sentLength = 0;
+    while (sentLength < length) {
+        bytesSent = send(socket, buffer + sentLength, length - sentLength, 0);
+        if (bytesSent <= 0)
+            break;
+        else
+            sentLength += bytesSent;
+    }
+}
+
 // --- Client Functions --- //
 
-int openConnectSocket(int port, int *msgBuffer, int *keyBuffer, int size) {
+int openConnectSocket(int port) {
     int socket_desc;
     struct sockaddr_in server;
 
@@ -54,9 +66,17 @@ int openConnectSocket(int port, int *msgBuffer, int *keyBuffer, int size) {
         puts("connect error\n");
         return -1;
     } else {
-        socket_desc;
+        return socket_desc;
     }
-    return 0;
+}
+
+void handleServerConnection(int clientFd, int encryptionMode,
+                            char *keyBuffer, char *msgBuffer, char *resultBuffer, size_t size) {
+    size_t sizeBuf[] = {size, (size_t) encryptionMode};
+    pushToSocket(clientFd, (char *) sizeBuf, sizeof(size_t) * 2);
+    pushToSocket(clientFd, keyBuffer, size);
+    pushToSocket(clientFd, msgBuffer, size);
+    pullFromSocket(clientFd, resultBuffer, size);
 }
 
 // ---- Server Functions ---- //

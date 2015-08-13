@@ -20,7 +20,6 @@ void handleClientEncryption(int clientFd) {
 }
 
 int main(int argc, char *argv[]) {
-
     /* --- Read port from arguments or print usage -- */
     if (argc < 2 || atoi(argv[1]) == 0) {
         printf("%s", usage);
