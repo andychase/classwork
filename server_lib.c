@@ -3,10 +3,12 @@
  * - My Flash Policy Server: https://github.com/andychase/FlashPolicyServer
  * - Signal tutorial: http://www.yolinux.com/TUTORIALS/C++Signals.html
 */
+#include "cipher_lib.h"
 #include <stdio.h>
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <stdlib.h>
+
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wmissing-noreturn"
@@ -18,6 +20,22 @@ void signal_callback_handler(int signalNumber) {
     close(socketFd);
     exit(0);
 }
+
+// --- Socket Utils --- //
+
+void pullFromSocket(int socket, char *buffer, size_t length) {
+    ssize_t bytesReceived;
+    size_t receivedLength = 0;
+    while (receivedLength < length) {
+        bytesReceived = recv(socket, buffer + receivedLength, length - receivedLength, 0);
+        if (bytesReceived <= 0)
+            break;
+        else
+            receivedLength += bytesReceived;
+    }
+}
+
+// --- Client Functions --- //
 
 int openConnectSocket(int port, int *msgBuffer, int *keyBuffer, int size) {
     int socket_desc;
@@ -39,6 +57,8 @@ int openConnectSocket(int port, int *msgBuffer, int *keyBuffer, int size) {
         socket_desc;
     }
 }
+
+// ---- Server Functions ---- //
 
 int startServer(char *serverName, int portNumber, void *(*callback)(void *)) {
     signal(SIGINT, signal_callback_handler);
@@ -85,6 +105,42 @@ int startServer(char *serverName, int portNumber, void *(*callback)(void *)) {
         } else if (pid == -1) {
             return 1;
         }
+    }
+}
+
+void handleClient(int clientFd, int encryptionMode, char *buffer, int *resultBuffer, int *keyBuffer, int *msgBuffer) {
+    ssize_t receiveLength;
+    ssize_t sendSuccess;
+    size_t msgAndKeyLength;
+    size_t isEncrypting;
+
+    while (1) {
+        // Read the key/msg length and the is_encrypting boolean
+        receiveLength = recv(clientFd, buffer, sizeof(size_t) * 2, 0);
+        if (!receiveLength)
+            return;
+
+        msgAndKeyLength = (size_t) buffer[0];
+        isEncrypting = (size_t) buffer[1];
+        if (isEncrypting != encryptionMode)
+            return;
+
+        pullFromSocket(clientFd, buffer, msgAndKeyLength);
+        buffer[msgAndKeyLength] = '\0';
+        encode(keyBuffer, buffer);
+
+        pullFromSocket(clientFd, buffer, msgAndKeyLength);
+        buffer[msgAndKeyLength] = '\0';
+        encode(msgBuffer, buffer);
+        if (encryptionMode)
+            encrypt(resultBuffer, msgBuffer, keyBuffer, (int) msgAndKeyLength);
+        else
+            decrypt(resultBuffer, msgBuffer, keyBuffer, (int) msgAndKeyLength);
+
+        decode(buffer, resultBuffer, (int) msgAndKeyLength);
+        sendSuccess = send(clientFd, buffer, msgAndKeyLength, 0);
+        if (!sendSuccess)
+            return;
     }
 }
 
