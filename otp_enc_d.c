@@ -15,7 +15,7 @@ int resultBuffer[BUFSIZ];
 const char *usage = "Usage: otd_enc_d [port #]\n";
 
 void handleClientEncryption(int clientFd) {
-    int encryptionMode = 1; // Encryption Mode set
+    int encryptionMode = 1; /* Encryption Mode set */
     handleClient(clientFd, encryptionMode, buffer, resultBuffer, keyBuffer, msgBuffer);
 }
 

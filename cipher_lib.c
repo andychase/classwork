@@ -5,7 +5,7 @@
 #define STARTCHAR (int) 'A'
 #define CHARSET 27
 
-// Encode char to 0-27
+/* Encode char to 0-27 */
 int encodeChar(char inputChar) {
     if (inputChar == ' ') {
         return CHARSET - 1;
@@ -20,7 +20,7 @@ int encodeChar(char inputChar) {
     }
 }
 
-// Decode 0-27 to char
+/* Decode 0-27 to char */
 char decodeChar(int inputInt) {
     if (inputInt == CHARSET - 1) {
         return ' ';
@@ -45,7 +45,7 @@ void otp_decode(char *buffer, int *inputArray, int size) {
     buffer[size] = '\0';
 }
 
-// Encrypts text using buffer
+/* Encrypts text using buffer */
 void otp_encrypt(int *buffer, int *text, int *key, int size) {
     int i;
     for (i = 0; i < size; i++) {
@@ -53,7 +53,7 @@ void otp_encrypt(int *buffer, int *text, int *key, int size) {
     }
 }
 
-// Decrypts text using buffer
+/* Decrypts text using buffer */
 void otp_decrypt(int *buffer, int *text, int *key, int size) {
     int i;
     int result;
@@ -66,7 +66,8 @@ void otp_decrypt(int *buffer, int *text, int *key, int size) {
     }
 }
 
-void selfTest() {
+/* A unit test function which is not linked anywhere currently */
+void __unused selfTest() {
     int buffer[5];
     int inputMsg[] = {7, 4, 11, 11, 14};
     int inputKey[] = {23, 12, 2, 10, 11};
