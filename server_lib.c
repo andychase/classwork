@@ -73,8 +73,8 @@ int openConnectSocket(int port) {
 
 size_t handleServerConnection(int clientFd, int encryptionMode,
                             char *keyBuffer, char *msgBuffer, char *resultBuffer, size_t size) {
-    char sizeBuf[] = {(char) size, (char) (size_t) encryptionMode};
-    pushToSocket(clientFd, sizeBuf, sizeof(char) * 2);
+    size_t sizeBuf[] = {(size_t) encryptionMode, size};
+    pushToSocket(clientFd, (char *) sizeBuf, sizeof(size_t) * 2);
     pushToSocket(clientFd, keyBuffer, size);
     pushToSocket(clientFd, msgBuffer, size);
     return pullFromSocket(clientFd, resultBuffer, size);
@@ -137,12 +137,12 @@ void handleClient(int clientFd, int encryptionMode, char *buffer, int *resultBuf
 
     while (1) {
         // Read the key/msg length and the is_encrypting boolean
-        receiveLength = recv(clientFd, buffer, sizeof(char) * 2, 0);
+        receiveLength = recv(clientFd, buffer, sizeof(size_t) * 2, 0);
         if (!receiveLength)
             return;
 
-        msgAndKeyLength = (size_t) buffer[0];
-        isEncrypting = (size_t) buffer[1];
+        isEncrypting = ((size_t *) buffer)[0];
+        msgAndKeyLength = ((size_t *) buffer)[1];
         if (isEncrypting != encryptionMode) {
             shutdown(clientFd, 2);
             close(clientFd);
