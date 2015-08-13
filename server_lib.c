@@ -56,11 +56,12 @@ int openConnectSocket(int port, int *msgBuffer, int *keyBuffer, int size) {
     } else {
         socket_desc;
     }
+    return 0;
 }
 
 // ---- Server Functions ---- //
 
-int startServer(char *serverName, int portNumber, void *(*callback)(void *)) {
+int startServer(char *serverName, int portNumber, void (*callback)(int)) {
     signal(SIGINT, signal_callback_handler);
 
     /* --- Create streaming socket --- */
@@ -100,7 +101,7 @@ int startServer(char *serverName, int portNumber, void *(*callback)(void *)) {
         /* --- Process connection in child process --- */
         int pid = fork();
         if (pid == 0) {
-            callback((void *) clientFd);
+            callback(clientFd);
             return 0;
         } else if (pid == -1) {
             return 1;
@@ -127,17 +128,17 @@ void handleClient(int clientFd, int encryptionMode, char *buffer, int *resultBuf
 
         pullFromSocket(clientFd, buffer, msgAndKeyLength);
         buffer[msgAndKeyLength] = '\0';
-        encode(keyBuffer, buffer);
+        otp_encode(keyBuffer, buffer);
 
         pullFromSocket(clientFd, buffer, msgAndKeyLength);
         buffer[msgAndKeyLength] = '\0';
-        encode(msgBuffer, buffer);
+        otp_encode(msgBuffer, buffer);
         if (encryptionMode)
-            encrypt(resultBuffer, msgBuffer, keyBuffer, (int) msgAndKeyLength);
+            otp_encrypt(resultBuffer, msgBuffer, keyBuffer, (int) msgAndKeyLength);
         else
-            decrypt(resultBuffer, msgBuffer, keyBuffer, (int) msgAndKeyLength);
+            otp_decrypt(resultBuffer, msgBuffer, keyBuffer, (int) msgAndKeyLength);
 
-        decode(buffer, resultBuffer, (int) msgAndKeyLength);
+        otp_decode(buffer, resultBuffer, (int) msgAndKeyLength);
         sendSuccess = send(clientFd, buffer, msgAndKeyLength, 0);
         if (!sendSuccess)
             return;

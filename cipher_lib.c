@@ -29,7 +29,7 @@ char decodeChar(int inputInt) {
     }
 }
 
-void encode(int *buffer, char *inputString) {
+void otp_encode(int *buffer, char *inputString) {
     int i;
     int length = (int) strlen(inputString);
     for (i = 0; i < length; i++) {
@@ -37,7 +37,7 @@ void encode(int *buffer, char *inputString) {
     }
 }
 
-void decode(char *buffer, int *inputArray, int size) {
+void otp_decode(char *buffer, int *inputArray, int size) {
     int i;
     for (i = 0; i < size; i++) {
         buffer[i] = decodeChar(inputArray[i]);
@@ -46,7 +46,7 @@ void decode(char *buffer, int *inputArray, int size) {
 }
 
 // Encrypts text using buffer
-void encrypt(int *buffer, int *text, int *key, int size) {
+void otp_encrypt(int *buffer, int *text, int *key, int size) {
     int i;
     for (i = 0; i < size; i++) {
         buffer[i] = (text[i] + key[i]) % CHARSET;
@@ -54,7 +54,7 @@ void encrypt(int *buffer, int *text, int *key, int size) {
 }
 
 // Decrypts text using buffer
-void decrypt(int *buffer, int *text, int *key, int size) {
+void otp_decrypt(int *buffer, int *text, int *key, int size) {
     int i;
     int result;
     for (i = 0; i < size; i++) {
@@ -70,25 +70,25 @@ void selfTest() {
     int buffer[5];
     int inputMsg[] = {7, 4, 11, 11, 14};
     int inputKey[] = {23, 12, 2, 10, 11};
-    encrypt(buffer, inputMsg, inputKey, 5);
+    otp_encrypt(buffer, inputMsg, inputKey, 5);
     assert(buffer[0] == 3);
     assert(buffer[1] == 16);
     assert(buffer[2] == 13);
     assert(buffer[3] == 21);
     assert(buffer[4] == 25);
-    decrypt(buffer, buffer, inputKey, 5);
+    otp_decrypt(buffer, buffer, inputKey, 5);
     assert(buffer[0] == inputMsg[0]);
     assert(buffer[1] == inputMsg[1]);
     assert(buffer[2] == inputMsg[2]);
     assert(buffer[3] == inputMsg[3]);
     assert(buffer[4] == inputMsg[4]);
-    encode(buffer, "h llo");
+    otp_encode(buffer, "h llo");
     assert(buffer[0] == inputMsg[0]);
     assert(buffer[1] == 26);
     assert(buffer[2] == inputMsg[2]);
     assert(buffer[3] == inputMsg[3]);
     assert(buffer[4] == inputMsg[4]);
     char buffer2[5];
-    decode(buffer2, inputMsg, 5);
+    otp_decode(buffer2, inputMsg, 5);
     assert(strstr(buffer2, "hello"));
 }

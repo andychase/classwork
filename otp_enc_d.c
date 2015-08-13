@@ -1,7 +1,5 @@
-#include "cipher_lib.h"
 #include <stdlib.h>
 #include <stdio.h>
-#include <sys/socket.h>
 #include "server_lib.h"
 
 #pragma clang diagnostic push
@@ -16,38 +14,9 @@ int resultBuffer[BUFSIZ];
 
 const char *usage = "Usage: otd_enc_d [port #]\n";
 
-void *handleClientEncryption(void *_clientFd) {
-    int clientFd = (int) _clientFd;
-    ssize_t receiveLength;
-    ssize_t sendSuccess;
-    size_t keyLength;
-    size_t msgLength;
-
-    while (1) {
-        // Read the key and msg lengths
-        receiveLength = recv(clientFd, buffer, sizeof(int) * 2, 0);
-        if (!receiveLength)
-            return NULL;
-        keyLength = (size_t) buffer[0];
-        msgLength = (size_t) buffer[1];
-        receiveLength = 0;
-        while (receiveLength < keyLength)
-            receiveLength += recv(clientFd, buffer + receiveLength, keyLength - receiveLength, 0);
-        buffer[keyLength] = '\0';
-        encode(keyBuffer, buffer);
-        receiveLength = 0;
-        while (receiveLength < msgLength)
-            receiveLength += recv(clientFd, buffer + receiveLength, msgLength - receiveLength, 0);
-        buffer[msgLength] = '\0';
-        encode(msgBuffer, buffer);
-        encrypt(resultBuffer, msgBuffer, keyBuffer, (int) msgLength);
-        decode(buffer, resultBuffer, (int) msgLength);
-        sendSuccess = send(clientFd, buffer, msgLength, 0);
-        if (!sendSuccess)
-            return NULL;
-    }
-
-    return NULL;
+void handleClientEncryption(int clientFd) {
+    int encryptionMode = 1; // Encryption Mode set
+    handleClient(clientFd, encryptionMode, buffer, resultBuffer, keyBuffer, msgBuffer);
 }
 
 int main(int argc, char *argv[]) {
