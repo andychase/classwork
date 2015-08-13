@@ -66,8 +66,8 @@ void otp_decrypt(int *buffer, int *text, int *key, int size) {
     }
 }
 
-/* A unit test function which is not linked anywhere currently */
-void __unused selfTest() {
+/* A unit test function which tests these helper functions */
+void selfTest() {
     int buffer[5];
     int inputMsg[] = {7, 4, 11, 11, 14};
     int inputKey[] = {23, 12, 2, 10, 11};

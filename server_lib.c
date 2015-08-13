@@ -8,10 +8,8 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <signal.h>
 
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wmissing-noreturn"
 
 int socketFd;
 
@@ -72,7 +70,7 @@ int openConnectSocket(int port) {
 }
 
 size_t handleServerConnection(int clientFd, int encryptionMode,
-                            char *keyBuffer, char *msgBuffer, char *resultBuffer, size_t size) {
+                              char *keyBuffer, char *msgBuffer, char *resultBuffer, size_t size) {
     size_t sizeBuf[] = {(size_t) encryptionMode, size};
     pushToSocket(clientFd, (char *) sizeBuf, sizeof(size_t) * 2);
     pushToSocket(clientFd, keyBuffer, size);
@@ -168,5 +166,3 @@ void handleClient(int clientFd, int encryptionMode, char *buffer, int *resultBuf
             return;
     }
 }
-
-#pragma clang diagnostic pop

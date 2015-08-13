@@ -2,9 +2,6 @@
 #include <stdio.h>
 #include "server_lib.h"
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wmissing-noreturn"
-
 
 int portNumber = 8080;
 char buffer[BUFSIZ];
@@ -31,4 +28,3 @@ int main(int argc, char *argv[]) {
     return startServer("otp_enc_d", portNumber, handleClientEncryption);
 }
 
-#pragma clang diagnostic pop
