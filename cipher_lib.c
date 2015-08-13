@@ -2,7 +2,7 @@
 #include <assert.h>
 #include "cipher_lib.h"
 
-#define STARTCHAR (int) 'a'
+#define STARTCHAR (int) 'A'
 #define CHARSET 27
 
 // Encode char to 0-27
@@ -82,7 +82,7 @@ void selfTest() {
     assert(buffer[2] == inputMsg[2]);
     assert(buffer[3] == inputMsg[3]);
     assert(buffer[4] == inputMsg[4]);
-    otp_encode(buffer, "h llo");
+    otp_encode(buffer, "H LLO");
     assert(buffer[0] == inputMsg[0]);
     assert(buffer[1] == 26);
     assert(buffer[2] == inputMsg[2]);
@@ -90,5 +90,5 @@ void selfTest() {
     assert(buffer[4] == inputMsg[4]);
     char buffer2[5];
     otp_decode(buffer2, inputMsg, 5);
-    assert(strstr(buffer2, "hello"));
+    assert(strstr(buffer2, "HELLO"));
 }

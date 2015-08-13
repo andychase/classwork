@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <time.h>
 #define CHARSET 26
-#define STARTCHAR (int) 'a'
+#define STARTCHAR (int) 'A'
 
 char randChar() {
     return (char) ((rand() % CHARSET) + STARTCHAR);
