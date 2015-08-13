@@ -119,13 +119,13 @@ int startServer(char *serverName, int portNumber, void (*callback)(int)) {
         clientFd = accept(socketFd, (struct sockaddr *) &client_address, &addressLength);
         printf("%s\n", "Client connected");
         /* --- Process connection in child process --- */
-//        int pid = fork();
-//        if (pid == 0) {
+        int pid = fork();
+        if (pid == 0) {
             callback(clientFd);
             return 0;
-//        } else if (pid == -1) {
-//            return 1;
-//        }
+        } else if (pid == -1) {
+            return 1;
+        }
     }
 }
 
