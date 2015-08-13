@@ -50,6 +50,13 @@ int main(int argc, char **argv) {
                 msgBuffer[msgBytesRead - 1] = '\0';
                 msgBytesRead -= 1;
             }
+            int i;
+            for(i=0;i<msgBytesRead;i++) {
+                if(msgBuffer[i] != ' ' && (msgBuffer[i] < 'A' || msgBuffer[i] > 'Z')) {
+                    fprintf(stderr, "Bad character found in plaintext\n");
+                    return 1;
+                }
+            }
             keyBytesRead = fread(keyBuffer, 1, msgBytesRead, keyFile);
 
             if (keyBytesRead) {
