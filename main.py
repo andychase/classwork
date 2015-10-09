@@ -11,14 +11,21 @@ IMAGE_DATA_KEY = 'image_data'
 
 
 def save_image_data():
-    image_data = [
-        ['image', request.form.get("images", "3vKIGia")],
-        ['upside_down', request.form.get("upside_down") is not None],
-        ['stretch', int(request.form.get("stretch", 0))],
-        ['color_change', request.form.get("color_change", "")],
-        ['words', request.form.get("words", "")]
-    ]
-    redis_store.set(IMAGE_DATA_KEY, json.dumps(image_data))
+    image_data = {
+        'image': request.form.get("images", "3vKIGia"),
+        'upside_down': request.form.get("upside_down") is not None,
+        'stretch': int(request.form.get("stretch", 0)),
+        'color_change': request.form.get("color_change", ""),
+        'words': request.form.get("words", "")[:1000]
+    }
+    if image_data['image'] not in {"3vKIGia", "b1cILHt"}:
+        image_data['image'] = "3vKIGia"
+    if image_data['color_change'] not in {"", "g", "b", "o"}:
+        image_data['color_change'] = ""
+    if image_data['stretch'] not in range(11):
+        image_data['stretch'] = 0
+
+    redis_store.set(IMAGE_DATA_KEY, json.dumps(list(image_data.items())))
 
 
 def load_image_data(retry=False):
