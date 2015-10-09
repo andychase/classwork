@@ -12,9 +12,9 @@ IMAGE_DATA_KEY = 'image_data'
 
 def save_image_data():
     image_data = [
-        ['image', request.form.get("images", "image1")],
+        ['image', request.form.get("images", "3vKIGia")],
         ['upside_down', request.form.get("upside_down") is not None],
-        ['stretch', int(request.form.get("stretch", "0"))],
+        ['stretch', int(request.form.get("stretch", 0))],
         ['color_change', request.form.get("color_change", "")],
         ['words', request.form.get("words", "")]
     ]
@@ -31,7 +31,8 @@ def load_image_data():
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    image_data = dict(load_image_data())
+    return render_template('index.html', vars=image_data)
 
 
 @app.route('/edit', methods=["get"])
@@ -43,7 +44,7 @@ def edit_get():
 @app.route('/edit', methods=["post"])
 def edit_post():
     save_image_data()
-    return redirect(url_for('view'))
+    return redirect(url_for('index'))
 
 
 @app.route('/view')

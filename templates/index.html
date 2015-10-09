@@ -1,6 +1,69 @@
 {% extends "base.html" %}
 {% block body %}
-  <h1><i class="fa fa-file-image-o"></i>&nbsp;<i class="fa fa-pencil-square"></i> Image Modify</h1>
-  <a class="button button-primary" href="/edit">Edit</a>
-  <a class="button button-primary" href="/view">View</a>
+  <style>
+    .image-box {
+      height: 400px;
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+
+    .image-box .full {
+      display: block;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+
+    .image-box .text {
+      width: {{ 300 + (100*vars.stretch) }}px;
+      height: 100%;
+      font-weight: bold;
+      padding: 10px;
+    {% if vars.stretch %}
+      letter-spacing: {{ vars.stretch*2 }}px;
+    {% endif %}
+    {% if vars.image == "b1cILHt" %}
+      color: white;
+    {% endif %}
+    }
+
+    .image-box .color-modify {
+      width: {{ 300 + (100*vars.stretch) }}px;
+      height: 100%;
+      opacity: .3;
+    {% if vars.color_change == "g" %}
+      background-color: green;
+    {% elif vars.color_change == "b" %}
+      background-color: blue;
+    {% elif vars.color_change == "o" %}
+      background-color: orange;
+    {% endif %}
+    }
+
+    .image-box .main-image {
+      width: {{ 300 + (100*vars.stretch) }}px;
+    {% if vars.stretch > 0 %}
+      height: 400px;
+    {% endif %}
+    {% if vars.upside_down %}
+      transform: rotate(180deg);
+    {% endif %}
+    }
+  </style>
+  <div class="row">
+    <div class="three columns">&nbsp;</div>
+    <div class="nine columns">
+      <div class="image-box">
+        <img class="full main-image" src="https://i.imgur.com/{{ vars.image }}.jpg"/>
+
+        <div class="full color-modify"></div>
+        <div class="full text">{{ vars.words }}</div>
+      </div>
+
+      <h1><i class="fa fa-file-image-o"></i>&nbsp;<i class="fa fa-pencil-square"></i> Image Modify</h1>
+      <a class="button button-primary" href="/edit">Edit</a>
+      <a class="button button-primary" href="/view">View</a>
+    </div>
+  </div>
 {% endblock %}
