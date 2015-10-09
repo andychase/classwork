@@ -1,59 +1,12 @@
 {% extends "base.html" %}
 {% block body %}
-  <form class="pure-form">
-    <h2>Choose an image</h2>
-
-    <div class="row">
-      <div class="six columns">
-        <label class="image-selection">
-          <input type="radio" name="images" value="images2" checked>
-
-      <span class="image-clip">
-        <img src="https://i.imgur.com/3vKIGia.jpg">
-      </span>
-        </label>
-      </div>
-      <div class="six columns">
-        <label class="image-selection">
-          <input id="option-three" type="radio" name="images" value="image2">
-
-      <span class="image-clip">
-        <img src="https://i.imgur.com/b1cILHt.jpg">
-      </span>
-        </label>
-      </div>
-    </div>
-
-
-    <h2>Choose some alterations</h2>
-
-    <div class="row">
-      <div class="six columns">
-        <label>
-          <input type="checkbox" value="">
-          Upside down
-        </label>
-        <label>
-          Width
-          <input type="range" name="points" min="0" max="10">
-        </label>
-      </div>
-      <div class="six columns">
-        <label>
-          Words
-          <input type="text" name="words">
-        </label>
-        <label>Color Shift
-          <select name="color_change">
-            <option value="">None</option>
-            <option value="g">Greenify</option>
-            <option value="b">Blueify</option>
-            <option value="o">Orangify</option>
-          </select>
-        </label>
-      </div>
-      <input class="button-primary" type="submit" value="Submit">
-    </div>
-
-  </form>
+  <a href="/"><i class="fa fa-arrow-left"></i>back</a>
+  <table>
+    {% for i in table %}
+      <tr>
+        <td>{{ i[0] }}</td>
+        <td>{{ i[1] }}</td>
+      </tr>
+    {% endfor %}
+  </table>
 {% endblock %}

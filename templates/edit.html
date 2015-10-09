@@ -1,12 +1,14 @@
 {% extends "base.html" %}
 {% block body %}
-  <form class="pure-form">
+  <form method="post">
+    <a href="/"><i class="fa fa-arrow-left"></i>back</a>
+
     <h2>Choose an image</h2>
 
     <div class="row">
       <div class="six columns">
         <label class="image-selection">
-          <input type="radio" name="images" value="images2" checked>
+          <input type="radio" name="images" value="images1" {% if vars.image == 'image1' %}checked{% endif %}>
 
       <span class="image-clip">
         <img src="https://i.imgur.com/3vKIGia.jpg">
@@ -15,8 +17,8 @@
       </div>
       <div class="six columns">
         <label class="image-selection">
-          <input id="option-three" type="radio" name="images" value="image2">
-
+          <input id="option-three" type="radio" name="images" value="image2"
+                 {% if vars.image == 'image2' %}checked{% endif %}>
       <span class="image-clip">
         <img src="https://i.imgur.com/b1cILHt.jpg">
       </span>
@@ -30,25 +32,25 @@
     <div class="row">
       <div class="six columns">
         <label>
-          <input type="checkbox" value="">
+          <input type="checkbox" name="upside_down" value="" {% if vars.upside_down %}checked{% endif %}>
           Upside down
         </label>
         <label>
-          Width
-          <input type="range" name="points" min="0" max="10">
+          Stretch
+          <input type="range" name="stretch" min="0" max="10" value="{{ vars.stretch }}">
         </label>
       </div>
       <div class="six columns">
         <label>
           Words
-          <input type="text" name="words">
+          <input type="text" name="words" value="{{ vars.words }}">
         </label>
         <label>Color Shift
           <select name="color_change">
-            <option value="">None</option>
-            <option value="g">Greenify</option>
-            <option value="b">Blueify</option>
-            <option value="o">Orangify</option>
+            <option value="" {% if vars.color_change == "" %}selected{% endif %}>None</option>
+            <option value="g" {% if vars.color_change == "g" %}selected{% endif %}>Greenify</option>
+            <option value="b" {% if vars.color_change == "b" %}selected{% endif %}>Blueify</option>
+            <option value="o" {% if vars.color_change == "o" %}selected{% endif %}>Orangify</option>
           </select>
         </label>
       </div>
