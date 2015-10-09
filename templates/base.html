@@ -10,9 +10,14 @@
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/skeleton/2.0.4/skeleton.min.css">
   <style>
+    html {
+      border-top: 2px solid #33C3F0;
+    }
+
     body {
       margin-top: 30px;
       font-family: 'Montserrat', sans-serif;
+
     }
 
     .image-selection img {
@@ -25,12 +30,30 @@
       max-height: 400px;
       overflow: hidden;
     }
+
+    .floating-cloud {
+      position: absolute;
+      right: 10%;
+      top: 30px;
+      color: white;
+      font-size: 36pt;
+    }
+
+    @media (min-width: 550px) {
+      .floating-cloud {
+        -webkit-text-fill-color: white;
+        -webkit-text-stroke-width: 1px;
+        -webkit-text-stroke-color: lightgrey;
+      }
+    }
   </style>
 </head>
 <body>
-<div class="container">
-      {% block body %}{% endblock %}
+<div class="floating-cloud">
+  <i class="fa fa-cloud"></i>
 </div>
-
+<div class="container">
+  {% block body %}{% endblock %}
+</div>
 </body>
 </html>
