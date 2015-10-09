@@ -21,11 +21,14 @@ def save_image_data():
     redis_store.set(IMAGE_DATA_KEY, json.dumps(image_data))
 
 
-def load_image_data():
-    image_data = json.loads(redis_store.get(IMAGE_DATA_KEY))
-    if image_data is None:
+def load_image_data(retry=False):
+    image_data_string = redis_store.get(IMAGE_DATA_KEY)
+
+    if image_data_string is None and retry is not True:
         save_image_data()
-        image_data = load_image_data()
+        return load_image_data(True)
+
+    image_data = json.loads(image_data_string)
     return image_data
 
 
