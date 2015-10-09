@@ -54,12 +54,12 @@ def view():
 
 
 class FlaskConfig(object):
-    DEBUG = os.getenv('DEBUG', True)
+    DEBUG = os.getenv('DEBUG', 'true') == 'true'
     REDIS_URL = os.getenv('REDIS_URL', '')
 
 
 app.config.from_object(FlaskConfig)
 
 redis_store = FlaskRedis(app)
-if os.getenv('DEBUG', True):
+if os.getenv('DEBUG', 'true') == 'true':
     app.run(debug=True)
