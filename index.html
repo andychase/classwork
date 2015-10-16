@@ -5,13 +5,47 @@
     <meta charset="utf-8">
 
     <title>CS290: Assignment 1</title>
-</head>
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/3.0.3/normalize.css">
+    <style>
+        html {
+            background-image: url('pipe_tile.jpg');
+        }
 
+        nav {
+            display: block;
+            width: 100%;
+            background-color: black;
+        }
+
+        nav ul {
+            display: flex;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        nav ul li {
+            text-align: center;
+            width: 20%;
+        }
+
+        nav ul li a {
+            display: inline-block;
+            padding: 10px;
+            color: #C3C3C3;
+            text-decoration: none;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .content article h2 {
+            font-family: cursive;
+        }
+    </style>
+</head>
 <body>
-<header>
-    Andrew Chase<br />
-    CS 290
-</header>
 <nav>
     <ul>
         <li>
@@ -34,11 +68,19 @@
         </li>
     </ul>
 </nav>
-<article>
-    <h2>Project: Drink Store</h2>
-    <p>
-        My project will be a simple drink store where people can log on and buy soda. It will be called Drink Store Club.
-    </p>
-</article>
+<div class="content">
+    <header>
+        Andrew Chase<br/>
+        CS 290
+    </header>
+    <article>
+        <h2>Project: Drink Store</h2>
+
+        <p>
+            My project will be a simple drink store where people can log on and buy soda. It will be called Drink Store
+            Club.
+        </p>
+    </article>
+</div>
 </body>
 </html>
