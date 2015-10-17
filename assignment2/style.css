@@ -1,0 +1,163 @@
+html {
+    background-image: url('images/stucco/stucco.png');
+}
+
+header, main, footer {
+    margin: 0 auto;
+    width: 800px;
+    font-size: 11pt;
+}
+
+.top-nav {
+    width: 100%;
+    background-color: #1a1a1b;
+    text-align: right;
+}
+
+.top-nav ul {
+    margin: 0;
+}
+
+.top-nav ul li {
+    list-style: none;
+    display: inline;
+}
+.top-nav ul li a {
+    display: inline-block;
+    padding: 9px;
+    text-decoration: none;
+    color: #6d6d6d;
+}
+
+h1 {
+    font-size: 34pt;
+    margin-top: 4px;
+    margin-bottom: 4px;
+}
+
+h2 {
+    font-size: 16pt;
+    margin-top: 4px;
+    margin-bottom: 2px;
+}
+h3 {
+    font-size: 10pt;
+    margin-bottom: 4px;
+}
+
+h4 {
+    border-bottom: 1px solid #c9c9c9;
+    padding-left: 4px;
+}
+
+.art-store-about {
+    width: 100%;
+    background-color: #ebebeb;
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+
+.art-store-about ul {
+    margin: 0;
+}
+
+.art-store-about ul li {
+    list-style: none;
+    display: inline;
+}
+.art-store-about ul li a {
+    display: inline-block;
+    padding: 9px;
+    text-decoration: none;
+    color: #4b4b4b;
+}
+
+main {
+    background-color: white;
+    padding: 8px;
+}
+
+.art-details-left {
+    display: inline-block;
+    width: 288px;
+    margin-right: 10px;
+}
+
+.art-details-right {
+    display: inline-block;
+    width: 470px;
+    vertical-align: top;
+}
+
+.art-piece-description {
+    margin-top: 0;
+}
+
+.art-piece-details-table table tr td:first-child {
+    font-weight: bold;
+    border-right: 2px solid white;
+}
+
+.art-piece-price {
+    font-weight: bold;
+    color: red;
+}
+
+.art-piece-actions {
+    padding: 12px;
+    border: 2px solid #ddd;
+    text-align: center;
+}
+
+.large-button {
+    padding: 6px 40px;
+    color: blue;
+    font-weight: bold;
+    font-size: 10pt;
+    border: 2px solid #ddd;
+    text-decoration: none;
+    background: linear-gradient(#eee, #ccc);
+}
+
+.art-similar-products .art-product img {
+    display: block;
+    width: 132px;
+    margin: 0 auto;
+}
+
+.art-similar-products .art-product {
+    display: inline-block;
+    width: 180px;
+    height: 185px;
+    margin: 5px;
+    padding-top: 10px;
+    border: 1px solid grey;
+    text-align: center;
+    font-size: 10pt;
+}
+
+.art-product-button {
+    font-size: 10pt;
+    border: 1px solid #747474;
+    color: black;
+    display: inline-block;
+    height: 10pt;
+    padding: 3pt 4pt;
+    margin: 2px;
+    text-decoration: none;
+    background: linear-gradient(#eee, #ccc);
+}
+
+.art-similar-title {
+    display: block;
+    text-align: left;
+    margin-left: 5px;
+}
+
+footer {
+    background-color: #1a1a1b;
+    text-align: center;
+    color: #d3d3d3;
+    font-size: 8pt;
+    padding: 4px;
+}
