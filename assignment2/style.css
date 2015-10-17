@@ -22,11 +22,12 @@ header, main, footer {
     list-style: none;
     display: inline;
 }
+
 .top-nav ul li a {
     display: inline-block;
     padding: 9px;
     text-decoration: none;
-    color: #6d6d6d;
+    color: #969696;
 }
 
 h1 {
@@ -40,6 +41,7 @@ h2 {
     margin-top: 4px;
     margin-bottom: 2px;
 }
+
 h3 {
     font-size: 10pt;
     margin-bottom: 4px;
@@ -65,6 +67,7 @@ h4 {
     list-style: none;
     display: inline;
 }
+
 .art-store-about ul li a {
     display: inline-block;
     padding: 9px;
@@ -159,5 +162,59 @@ footer {
     text-align: center;
     color: #d3d3d3;
     font-size: 8pt;
+    padding: 8px;
+}
+
+/* Registration page */
+label {
+    margin-right: 70px;
+}
+
+label {
+    display: inline-block;
+    height: 40px;
+    margin-bottom: 20px;
+}
+
+label span, .label-title {
+    font-weight: bold;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.input-email {
+    display: block;
+}
+
+.input-email input {
+    width: 400px;
+}
+
+.input-address {
+    display: block;
+}
+
+.input-address input {
+    width: 400px;
+}
+
+.sign-me-up {
+    background-color: #acc9f0;
     padding: 4px;
+    margin: 4px;
+    display: block;
+}
+
+input[name=interest] {
+    width: 300px;
+}
+
+.continent {
+    display: block;
+    height: 20px;
+    margin: 0;
+}
+
+.continent input {
+    margin-right: 5px;
 }
