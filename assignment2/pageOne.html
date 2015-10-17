@@ -2,76 +2,117 @@
 <html>
 <head lang="en">
     <meta charset="utf-8">
-    <title>Share Your Travels -- New York - Central Park</title>
+    <title>Assignment 1 - Page 1</title>
 </head>
 <body>
 <header>
-    <h1>Share Your Travels</h1>
-
-    <h2>New York - Central Park</h2>
-    <nav>
+    <nav class="top-nav">
         <ul>
-            <li><a href="#description">Description</a></li>
-            <li><a href="#related">Related Photos</a></li>
-            <li><a href="#reviews">Reviews</a></li>
+            <li><a href="pageTwo.html">My Account</a></li>
+            <li><a href="#">Wish List</a></li>
+            <li><a href="#">Shopping Cart</a></li>
+            <li><a href="#">Checkout</a></li>
+        </ul>
+    </nav>
+    <h1>Art Store</h1>
+    <nav class="art-store-about">
+        <ul>
+            <li><a href="#">Home</a></li>
+            <li><a href="#">About Us</a></li>
+            <li><a href="#">Art Works</a></li>
+            <li><a href="#">Artists</a></li>
         </ul>
     </nav>
 </header>
-<article>
-    <section>
-        <h3 id="description">Description</h3>
+<main>
+    <div>
+        <h2 class="art-piece-name">Self-portrait in a Straw Hat</h2>
 
-        <p>Photo by Randy Connolly</p>
+        <h3 class="art-piece-author">By <a href="#">Louise Elisabeth Lebrun</a></h3>
+    </div>
 
-        <p>This photo of Conservatory Pond in
-            <a href="http://www.centralpark.com/">Central Park</a> in
-            <a href="https://en.wikipedia.org/wiki/New_York_City">New York City</a> was
-            taken on October 22, 2011 with a Canon EOS 30D camera.
+    <div class="art-details-left">
+        <img src="images/113010-m.jpg" class="art-piece-image"/>
+    </div>
+    <div class="art-details-right">
+        <p class="art-piece-description">
+            The painting appears, after cleaning, to be an autograph replica of a picture, the original which was
+            painting in Brussels in 1782 in free imitation of Ruben's Chapau de Palle', which LeBrun has seen in
+            Antwerp. It was exhibited in Paris in 1782 at the Salon de la Correspondence. LeBrun's original is recorded
+            in a private collection in France.
         </p>
-        <figure>
-            <a href="images/large-central-park.jpg">
-                <img src="images/central-park.jpg" alt="Central Park" title="Central Park"/>
-            </a>
-            <figcaption>Conservatory Pond in Central Park</figcaption>
-        </figure>
-        <p>Share: <br/>
-            <img src="images/social/email_16.png" alt="Email this to someone"/>
-            <img src="images/social/rss_16.png" alt="Syndicated content"/>
-            <img src="images/social/twitter_16.png" alt="Share this on Twitter"/>
-        </p>
-    </section>
-    <section>
-        <h3 id="related">Related Photos</h3>
-        <a href="images/related-large1.jpg">
-            <img src="images/related-square1.jpg" alt="Field" title="Field"/>
-        </a>
-        <a href="images/related-large2.jpg">
-            <img src="images/related-square2.jpg" alt="Mountains" title="Mountains"/>
-        </a>
-        <a href="images/related-large3.jpg">
-            <img src="images/related-square3.jpg" alt="Skyscraper" title="Skyscraper"/>
-        </a>
-    </section>
-    <section>
-        <h3 id="reviews">Reviews</h3>
 
-        <div>
-            <p>By Ricardo on
-                <time datetime="2012-09-15">September 15, 2012</time>
-            </p>
-            <p>Easy on the HDR buddy.</p>
+        <p class="art-piece-price">$700</p>
+    </div>
+    <div class="art-piece-actions">
+        <span class="large-button">Add to Wish List</span>
+        <span class="large-button">Add to Shopping Cart</span>
+    </div>
+    <div>
+        <h4>Product Details</h4>
+        <table>
+            <tbody>
+            <tr>
+                <td>Date:</td>
+                <td>1782</td>
+            </tr>
+            <tr>
+                <td>Medium:</td>
+                <td>Oil on canvas</td>
+            </tr>
+            <tr>
+                <td>Dimensions:</td>
+                <td>98cm x 71cm</td>
+            </tr>
+            <tr>
+                <td>Home:</td>
+                <td><a href="#">National Gallery, London</a></td>
+            </tr>
+            <tr>
+                <td>Genres:</td>
+                <td><a href="#">Realism</a>, <a href="#">Rocco</a></td>
+            </tr>
+            <tr>
+                <td>Subjects:</td>
+                <td><a href="#">People</a>, <a href="#">Arts</a></td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="art-similar-products">
+        <div class="art-product">
+            <img src="images/thumbs/116010.jpg">
+            <a href="#">Artist Holding a Thistle</a>
+            <a href="#" class="art-product-button">View</a>
+            <a href="#" class="art-product-button">Wish</a>
+            <a href="#" class="art-product-button">Cart</a>
         </div>
-        <div>
-            <p>By Samantha on
-                <time datetime="2012-09-15">September 15, 2012</time>
-            </p>
-            <p>I love central park!</p>
+        <div class="art-product">
+            <img src="images/thumbs/120010.jpg">
+            <a href="#">Portrait of Eleanor of Toledo</a>
+            <a href="#" class="art-product-button">View</a>
+            <a href="#" class="art-product-button">Wish</a>
+            <a href="#" class="art-product-button">Cart</a>
         </div>
-        <hr/>
-    </section>
-</article>
+        <div class="art-product">
+            <img src="images/thumbs/107010.jpg">
+            <a href="#">Madame de Pompadour</a>
+            <a href="#" class="art-product-button">View</a>
+            <a href="#" class="art-product-button">Wish</a>
+            <a href="#" class="art-product-button">Cart</a>
+        </div>
+        <div class="art-product">
+            <img src="images/thumbs/106020.jpg">
+            <a href="#">Girl with a Pearl Earring</a>
+            <a href="#" class="art-product-button">View</a>
+            <a href="#" class="art-product-button">Wish</a>
+            <a href="#" class="art-product-button">Cart</a>
+        </div>
+    </div>
+</main>
 <footer>
-    <p><em>Copyright &copy; 2013 Share Your Travels</em></p>
+    All images are copyright to their owners.
+    This is just a hypothetical site copyright 2014 &copy; Copyright Art Store
 </footer>
 </body>
 </html>
