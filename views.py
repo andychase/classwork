@@ -29,6 +29,11 @@ def mag_make():
     * y -- Y Position from the left of the screen
     Note: This creates the site if none exists
     Note: /mag/make and /site/new are the same
+    Example Reponse:
+        {
+          "id": "1",
+          "ok": true
+        }
     """
     return jsonify(dict(ok=True, id=magnet.new(
         website_host=str(request.form.get('site'))[:100],
@@ -43,6 +48,19 @@ def mag_make():
 @auto.doc()
 def site_get(site):
     """ Returns all the magnet information and positions for a site.
+    If the requested site does not exist, the magnet list with be empty.
+    Example response:
+        {
+          "mags": [
+            {
+              "style": "",
+              "text": "test",
+              "x": 10,
+              "y": 10
+            }
+          ],
+          "ok": true
+        }
     """
     return jsonify({'ok': True, 'mags': list(magnet.get(site))})
 

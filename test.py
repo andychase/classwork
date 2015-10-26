@@ -13,7 +13,7 @@ class FlaskTestCase(unittest.TestCase):
         self.site_host = str(uuid.uuid4())
 
     def tearDown(self):
-        self.delete_site()
+        pass # self.delete_site()
 
     def make_site(self):
         self.app.post('/site/new', data=dict(
