@@ -1,12 +1,11 @@
-from redis.client import Redis
-
-redis = Redis()
+from app import redis
 
 
 def delete(host):
-    # Delete website if one exists
-    # Return value is True if one existed, False if not
     if host:
-        return redis.delete(host)
+        host_keys = redis.keys(host + "*")
+        if host_keys:
+            redis.delete(*host_keys)
+        return True
     else:
         return False

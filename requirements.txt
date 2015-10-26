@@ -1,3 +1,2 @@
-redis
 Flask
-# flask-redis
+flask-redis
