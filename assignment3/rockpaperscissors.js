@@ -32,7 +32,7 @@ function updateScoreboard(userWon) {
     } else {
         score = document.getElementById("computer-score-number");
     }
-    score.innerHtml = score.innerText++;
+    score.innerHTML = parseInt(score.innerHTML) + 1;
 }
 
 // Show results
