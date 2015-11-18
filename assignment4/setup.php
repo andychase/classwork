@@ -44,10 +44,15 @@ class DB
         $_SESSION['user'] = null;
     }
 
-    static function scoreboard($username, $password)
+    static function scoreboard()
     {
         global $PDO;
-
+        return $PDO
+            ->from('games')
+            ->leftJoin("users on users.id = games.user")
+            ->select(array('users.first as first', 'users.last as last', 'sum(won) as won'))
+            ->groupBy('users.id')
+            ->fetchAll();
     }
 
     public static function user()
@@ -56,5 +61,15 @@ class DB
         print_r($_SESSION['id']);
 
         return $PDO->from('users')->where('id', intval($_SESSION['user']))->fetch();
+    }
+
+    public static function save_score($won)
+    {
+        global $PDO;
+        $values = array(
+            'user' => $_SESSION['user'],
+            'won' => $won
+        );
+        return $PDO->insertInto('games', $values)->execute();
     }
 }
