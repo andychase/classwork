@@ -1,6 +1,5 @@
 <?php
 require_once('setup.php');
-require_once('./views/header.php');
 
 if ($_POST['move']) {
 
@@ -30,40 +29,60 @@ if ($_POST['move']) {
     $choices = array("paper", "rock", "scissors");
     $computerChoice = $choices[array_rand($choices)];
     $userChoice = $_POST['move'];
-    echo("<span class='user-choice'>User Choice: " . $userChoice . "</span>");
-    echo("<div class='computer-choice'>Computer Choice: " . $computerChoice . "</div>");
 
     $tie = didTie($userChoice, $computerChoice);
     $userWon = didUserWin($userChoice, $computerChoice);
     if ($tie) {
-        ?> Tie! <?php
     } elseif ($userWon) {
         db::save_score(1);
-        ?> User won! <?php
     } else {
         db::save_score(0);
-        ?> Computer won! <?php
     }
-    ?> <a href="./play.php">Replay!</a><?php
 
+    header('Content-Type: application/json');
+    echo json_encode(array(
+        'userChoice' => $userChoice,
+        'computerChoice' => $computerChoice,
+        'tie' => $tie,
+        'userWon' => $userWon,
+        'scoreboard' => [0, 0]
+    ));
+    exit();
+
+    /* Markup from Assignment 3 */
 } else {
+    require_once('./views/header.php');
 
     ?>
-    <form action="play.php" method="POST">
-        <label>
-            <input type="radio" name="move" value="rock"/> Rock
-        </label>
-        <label>
-            <input type="radio" name="move" value="paper"/> Paper
-        </label>
-        <label>
-            <input type="radio" name="move" value="scissors"/> Scissors
-        </label>
-        <input type="submit"/>
-    </form>
+    <div class="content">
+    <div class="scoreboard">
+			<span class="user score"><i class="fa fa-star-o"></i>
+				<span id="user-score-number">0</span>
+			</span>
+			<span class="computer score"><i class="fa fa-laptop"></i>
+				<span id="computer-score-number">0</span>
+			</span>
+    </div>
+
+    <div class="results">
+        <i id="c-usr" class="choice fa fa-hand-scissors-o"></i>
+        <i id="c-cmp" class="choice fa fa-hand-scissors-o"></i>
+    </div>
+
+
+    <i class="select fa fa-hand-rock-o rock"></i>
+    <i class="select fa fa-hand-paper-o paper"></i>
+    <i class="select fa fa-hand-scissors-o scissors"></i>
+
+    <div class="instructions">
+        Rocks, Paper, Scissors<br/>
+        Click an action above to play. Good luck!
+
+    </div>
+    </div>
 
     <?php
-
+    require_once('./views/footer.php');
 
 }
-require_once('./views/footer.php');
+

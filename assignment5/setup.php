@@ -2,7 +2,7 @@
 require_once('./vendor/autoload.php');
 session_start();
 
-if (gethostname() == "e44d230a.local")
+if (strpos(gethostname(), "e44d230a") !== false)
     $_pdo = new PDO('mysql:host=127.0.0.1;dbname=chasean-db', "root");
 else
     $_pdo = new PDO('mysql:host=oniddb.cws.oregonstate.edu;dbname=chasean-db', "chasean-db", "GKyIAFpEw2vvGFeo");

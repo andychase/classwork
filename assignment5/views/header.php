@@ -5,7 +5,9 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <title>Rock Paper Scissors Game</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/3.0.3/normalize.css"/>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
     <link rel="stylesheet" href="./style.css"/>
+    <script src="./script.js" ></script>
 </head>
 <body>
 <header>
