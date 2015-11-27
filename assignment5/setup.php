@@ -55,6 +55,18 @@ class DB
             ->fetchAll();
     }
 
+    static function scoreboard_for_user()
+    {
+        global $PDO;
+        return $PDO
+            ->from('games')
+            ->leftJoin("users on users.id = games.user")
+            ->select(array('users.first as first', 'users.last as last', 'sum(won) as won', 'count(won) - sum(won) as lost'))
+            ->where("users.id", intval($_SESSION['user']))
+            ->groupBy('users.id')
+            ->fetch();
+    }
+
     public static function user()
     {
         global $PDO;

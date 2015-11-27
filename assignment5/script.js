@@ -44,7 +44,9 @@ function callAjax(url, data, callback) {
 
 function sendChoice(userChoice) {
     callAjax("/play.php", "move=" + userChoice, function (data) {
-        showResult(userChoice, data.computerChoice, data.userWon)
+        showResult(userChoice, data.computerChoice, data.userWon);
+        document.getElementById("user-score-number").innerHTML = data['scoreboard'][0];
+        document.getElementById("computer-score-number").innerHTML = data['scoreboard'][1];
     });
 }
 

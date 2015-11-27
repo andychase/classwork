@@ -2,7 +2,6 @@
 require_once('setup.php');
 
 if ($_POST['move']) {
-
     function didUserWin($userChoice, $computerChoice)
     {
         if ($userChoice == "rock" && $computerChoice == "paper") {
@@ -39,28 +38,29 @@ if ($_POST['move']) {
         db::save_score(0);
     }
 
+    $score = DB::scoreboard_for_user();
     header('Content-Type: application/json');
     echo json_encode(array(
         'userChoice' => $userChoice,
         'computerChoice' => $computerChoice,
         'tie' => $tie,
         'userWon' => $userWon,
-        'scoreboard' => [0, 0]
+        'scoreboard' => [$score['won'], $score['lost']]
     ));
-    exit();
 
     /* Markup from Assignment 3 */
 } else {
     require_once('./views/header.php');
+    $score = DB::scoreboard_for_user();
 
     ?>
     <div class="content">
     <div class="scoreboard">
 			<span class="user score"><i class="fa fa-star-o"></i>
-				<span id="user-score-number">0</span>
+				<span id="user-score-number"><?php echo($score['won']); ?></span>
 			</span>
 			<span class="computer score"><i class="fa fa-laptop"></i>
-				<span id="computer-score-number">0</span>
+				<span id="computer-score-number"><?php echo($score['lost']); ?></span>
 			</span>
     </div>
 
@@ -83,6 +83,5 @@ if ($_POST['move']) {
 
     <?php
     require_once('./views/footer.php');
-
 }
 
