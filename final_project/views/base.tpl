@@ -19,7 +19,7 @@
             <h1><a class="navbar-brand" href="/"><span class="drink">Drink</span>Shop</a></h1>
         </div>
         <ul class="nav navbar-nav navbar-right">
-            <li><a href="/login.php">Sign In</a></li>
+            <li><a href="/login.php">Sign In / Register</a></li>
             {if $user}
             <li><a href="/logout.php">Log out</a></li>
             {/if}
@@ -28,6 +28,11 @@
     </div>
 </nav>
 {block 'content'}{/block}
+<footer class="footer">
+    <div class="container">
+        <p class="text-muted">Place sticky footer content here.</p>
+    </div>
+</footer>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"
         integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS"
