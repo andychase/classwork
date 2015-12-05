@@ -44,3 +44,8 @@
             -1px 1px 0 #000,
             1px 1px 0 #000;
 }
+
+.space-down {
+    margin-top: 50px;
+    margin-bottom: 50px;
+}
