@@ -23,6 +23,7 @@
             {if $user}
             <li><a href="/logout.php">Log out</a></li>
             {/if}
+            <li><a href="/checkout.php">Shopping Chart<span class="badge" id="shopping-amount">$0.00</span></a></li>
         </ul>
     </div>
 </nav>

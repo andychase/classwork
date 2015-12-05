@@ -75,3 +75,11 @@
     height: 32px;
     line-height: 18px;
 }
+
+.badge {
+    padding: 2px 7px 4px;
+}
+
+#shopping-amount {
+    margin-left: 5px;
+}
