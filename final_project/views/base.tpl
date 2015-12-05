@@ -20,11 +20,11 @@
         </div>
         <ul class="nav navbar-nav navbar-right">
             {if $user}
-                <li><a href="/logout.php">Log out</a></li>
+                <li><a href="./logout.php">Log out</a></li>
             {else}
-                <li><a href="/login.php">Sign In / Register</a></li>
+                <li><a href="./login.php">Sign In / Register</a></li>
             {/if}
-            <li><a href="/checkout.php">Shopping Chart<span class="badge" id="shopping-amount">$0.00</span></a></li>
+            <li><a href="./checkout.php">Shopping Chart<span class="badge" id="shopping-amount">${$cart_total}.00</span></a></li>
         </ul>
     </div>
 </nav>

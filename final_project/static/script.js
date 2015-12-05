@@ -22,3 +22,18 @@ $(".form-signin, .form-register").submit(function (e) {
 
     e.preventDefault();
 });
+
+var timeout = 0;
+
+$(".drink-btn").click(function () {
+    var drink = $(this);
+    drink.addClass("clicked");
+    if (timeout)
+        window.clearTimeout(timeout);
+    timeout = window.setTimeout(function () {
+        drink.removeClass("clicked");
+    }, 500);
+    $.post("./cart.php", {add: drink.attr('id')}, function (result) {
+        $("#shopping-amount").html("$" + result['amount'] + ".00");
+    });
+});

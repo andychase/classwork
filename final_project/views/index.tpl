@@ -14,17 +14,15 @@
             {foreach $drinks as $drink}
                 <div class="panel panel-default drink-panel">
                     <div class="panel-body">
-                        <img src="/static/drinks/{$drink.0}.png" />
-
+                        <img src="/static/drinks/{$drink.0}.png"/>
                     </div>
                     <div class="panel-footer drink-footer">
                         <span class="badge">${$drink.2}</span>
                         <span class="drink">{$drink.1}</span>
-                        <button class="btn btn-default drink-btn" type="submit">+</button>
+                        <button class="btn btn-default drink-btn" id="{$drink.1|lower}" type="submit">+</button>
                     </div>
                 </div>
-                {/foreach}
-            </div>
+            {/foreach}
         </div>
     </div>
 {/block}

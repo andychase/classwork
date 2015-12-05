@@ -15,6 +15,14 @@ $smarty = new Smarty();
 if ($_SESSION['user'])
     $smarty->assign("user", $_SESSION['user']);
 
+function get_total() {
+    $total = 0;
+    foreach($_SESSION['cart'] as $drink) {
+        $total += $drink * 20;
+    }
+    return $total;
+}
+
 $smarty->setTemplateDir('views');
 $smarty->setCompileDir('views/compile');
 $smarty->setCacheDir('views/cache');
@@ -23,7 +31,6 @@ class DB
 {
     static function pass_hash($password)
     {
-        global $PDO;
         return sha1($password);
     }
 
@@ -64,3 +71,5 @@ class DB
 
 
 }
+
+$smarty->assign("cart_total", get_total());
