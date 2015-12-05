@@ -49,3 +49,29 @@
     margin-top: 50px;
     margin-bottom: 50px;
 }
+
+.drink-panel {
+    width: 200px;
+    display: inline-block;
+    margin-left: 15px;
+    margin-right: 15px;
+    text-align: center;
+}
+
+.drink-panel img {
+    height: 204px;
+}
+
+
+.drink-footer {
+    position: relative;
+    text-align: left;
+}
+
+.drink-btn {
+    position: absolute;
+    right: 12px;
+    top: 4px;
+    height: 32px;
+    line-height: 18px;
+}
