@@ -21,6 +21,7 @@
         <ul class="nav navbar-nav navbar-right">
             {if $user}
                 <li><a href="./logout.php">Log out</a></li>
+                <li><a href="../past.php">Past Orders</a></li>
             {else}
                 <li><a href="./login.php">Sign In / Register</a></li>
             {/if}

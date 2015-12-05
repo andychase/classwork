@@ -92,6 +92,12 @@ class DB
         return $PDO->from('users')->where('id', intval($_SESSION['user']))->fetch();
     }
 
+    public static function past_orders($user)
+    {
+        global $PDO;
+        return $PDO->from('orders')->where('user', $user)->orderBy("id desc")->fetchAll();
+    }
+
 
 }
 

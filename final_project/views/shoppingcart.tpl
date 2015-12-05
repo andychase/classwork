@@ -24,7 +24,11 @@
                     </tbody>
                 </table>
                 {if $user}
-                    <p><a class="btn btn-primary btn-lg" href="checkout.php" role="button">Checkout</a></p>
+                    {if $cart_total}
+                        <p><a class="btn btn-primary btn-lg" href="checkout.php" role="button">Checkout</a></p>
+                    {else}
+                        <p>Add things to your chart to checkout!</p>
+                    {/if}
                 {else}
                     <p><a class="btn btn-primary btn-lg" href="login.php" role="button">Signin to Checkout</a></p>
                 {/if}
