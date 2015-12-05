@@ -10,6 +10,13 @@ else
 
 $PDO = new FluentPDO($_pdo);
 
+date_default_timezone_set('UTC');
+$smarty = new Smarty();
+
+$smarty->setTemplateDir('views');
+$smarty->setCompileDir('views/compile');
+$smarty->setCacheDir('views/cache');
+
 class DB
 {
     static function pass_hash($password)
