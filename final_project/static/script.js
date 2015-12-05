@@ -33,7 +33,15 @@ $(".drink-btn").click(function () {
     timeout = window.setTimeout(function () {
         drink.removeClass("clicked");
     }, 500);
-    $.post("./cart.php", {add: drink.attr('id')}, function (result) {
+    $.post("./edit_cart.php", {add: drink.attr('id')}, function (result) {
         $("#shopping-amount").html("$" + result['amount'] + ".00");
+    });
+});
+
+$(".remove-drink-button").click(function () {
+    var drink = $(this);
+    $.post("./edit_cart.php", {remove: drink.attr('id')}, function (result) {
+        $("#shopping-amount").html("$" + result['amount'] + ".00");
+        drink.parent().parent().remove();
     });
 });

@@ -23,6 +23,19 @@ function get_total() {
     return $total;
 }
 
+$drinks = array(
+    array("001", "Coke", "20"),
+    array("002", "Coke Light", "20"),
+    array("009", "Cherry Coke", "20"),
+    array("003", "Cherry 7UP", "20"),
+    array("004", "7UP Free", "20"),
+    array("006", "Fanta", "20"),
+    array("005", "Fanta Can", "20"),
+    array("008", "IceTea", "20"),
+    array("007", "IceTea Can", "20"),
+);
+
+
 $smarty->setTemplateDir('views');
 $smarty->setCompileDir('views/compile');
 $smarty->setCacheDir('views/cache');

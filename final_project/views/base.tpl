@@ -24,7 +24,7 @@
             {else}
                 <li><a href="./login.php">Sign In / Register</a></li>
             {/if}
-            <li><a href="./checkout.php">Shopping Chart<span class="badge" id="shopping-amount">${$cart_total}.00</span></a></li>
+            <li><a href="./cart.php">Shopping Chart<span class="badge" id="shopping-amount">${$cart_total}.00</span></a></li>
         </ul>
     </div>
 </nav>
