@@ -32,7 +32,7 @@
 {block 'content'}{/block}
 <footer class="footer">
     <div class="container">
-        <p class="text-muted">Place sticky footer content here.</p>
+        <p class="text-muted">(c) 2015 DrinkShop. <a href="./contact.php">Contact/References</a></p>
     </div>
 </footer>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
