@@ -12,6 +12,8 @@ $PDO = new FluentPDO($_pdo);
 
 date_default_timezone_set('UTC');
 $smarty = new Smarty();
+if ($_SESSION['user'])
+    $smarty->assign("user", $_SESSION['user']);
 
 $smarty->setTemplateDir('views');
 $smarty->setCompileDir('views/compile');
@@ -34,14 +36,14 @@ class DB
             ->fetch('id');
     }
 
-    static function register($username, $password, $first_name, $last_name)
+    static function register($username, $password)
     {
         global $PDO;
         $values = array(
             'username' => $username,
             'password' => DB::pass_hash($password),
-            'first' => $first_name,
-            'last' => $last_name
+            'first' => "",
+            'last' => ""
         );
         return $PDO->insertInto('users', $values)->execute();
     }
