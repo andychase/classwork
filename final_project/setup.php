@@ -68,6 +68,16 @@ class DB
         return $PDO->insertInto('users', $values)->execute();
     }
 
+    static function add_order($user_id, $order)
+    {
+        global $PDO;
+        $values = array(
+            'user' => $user_id,
+            'order_text' => json_encode($order)
+        );
+        return $PDO->insertInto('orders', $values)->execute();
+    }
+
     static function logout()
     {
         $_SESSION['user'] = null;

@@ -13,6 +13,7 @@
         <div class="row">
             <div class="col-md-6 col-md-offset-4">
                 <p>Keep this receipt for your records.</p>
+                <p>Order number #{$order_number}.</p>
                 <table class="drink-checkout-list">
                     <thead>
                     <tr>
