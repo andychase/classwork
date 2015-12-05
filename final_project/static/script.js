@@ -12,7 +12,7 @@ $(".form-signin, .form-register").submit(function (e) {
     }
     $.post("./login.php", data, function (result) {
         if (result['success'] == "ok") {
-            window.location = "..";
+            window.location = ".";
         } else {
             var loginError = $("#login-error");
             loginError.show();

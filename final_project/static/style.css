@@ -18,7 +18,7 @@
 }
 
 .jumbo-wrapper {
-    background: url('/static/jumbo_img2.jpg');
+    background: url('jumbo_img2.jpg');
     background-size: cover;
 }
 
@@ -27,12 +27,12 @@
 }
 
 .jumbo-wrapper-2 {
-    background: url('/static/jumbo_img.jpg');
+    background: url('jumbo_img.jpg');
     background-size: cover;
 }
 
 .jumbo-wrapper-2 .jumbotron {
-    background: url('/static/seikaiha2_black.png');
+    background: url('seikaiha2_black.png');
     background-size: 57px 29px;
 }
 

@@ -14,7 +14,7 @@
             {foreach $drinks as $drink}
                 <div class="panel panel-default drink-panel">
                     <div class="panel-body">
-                        <img src="/static/drinks/{$drink.0}.png"/>
+                        <img src="./static/drinks/{$drink.0}.png"/>
                     </div>
                     <div class="panel-footer drink-footer">
                         <span class="badge">${$drink.2}</span>

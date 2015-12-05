@@ -28,7 +28,7 @@
                     <li><span class="badge">20</span> Points —  Gnarly Skateboard</li>
                     <li><span class="badge">30</span> Points — Wicked Pogo-stick</li>
                 </ul>
-                <p class="space-down"><a class="btn btn-primary btn-lg" href=".." role="button">Buy some drinks</a></p>
+                <p class="space-down"><a class="btn btn-primary btn-lg" href="." role="button">Buy some drinks</a></p>
                 <p class="text-muted">(c) 2015 DrinkShop. <a href="./contact.php">Contact/References</a></p>
             </div>
         </div>
