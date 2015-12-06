@@ -17,15 +17,39 @@
                         <animations/>
                         <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="calibratedWhite"/>
                     </tabBar>
+                    <connections>
+                        <segue destination="T84-iY-8mm" kind="relationship" relationship="viewControllers" id="new-ya-iv8"/>
+                        <segue destination="vTM-P4-8Gc" kind="relationship" relationship="viewControllers" id="7fp-C2-c2f"/>
+                    </connections>
                 </tabBarController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="HuB-VB-40B" sceneMemberID="firstResponder"/>
             </objects>
             <point key="canvasLocation" x="684" y="804"/>
         </scene>
-        <!--View Controller-->
+        <!--My List-->
+        <scene sceneID="2bL-Mv-OMx">
+            <objects>
+                <viewController id="T84-iY-8mm" customClass="FirstViewController" customModule="finalProject" customModuleProvider="target" sceneMemberID="viewController">
+                    <layoutGuides>
+                        <viewControllerLayoutGuide type="top" id="3J1-fW-v2m"/>
+                        <viewControllerLayoutGuide type="bottom" id="rT4-vL-Pcw"/>
+                    </layoutGuides>
+                    <view key="view" contentMode="scaleToFill" id="RyW-hn-2Jz">
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <animations/>
+                        <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
+                    </view>
+                    <tabBarItem key="tabBarItem" title="My List" image="first" id="o9q-Zk-dcm"/>
+                </viewController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="MlC-cT-DXP" userLabel="First Responder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="1521" y="356"/>
+        </scene>
+        <!--Sign In View Controller-->
         <scene sceneID="pUU-gY-ZSe">
             <objects>
-                <viewController id="5Ce-KI-ICt" sceneMemberID="viewController">
+                <placeholder placeholderIdentifier="IBFirstResponder" id="cFy-c3-UOq" userLabel="First Responder" sceneMemberID="firstResponder"/>
+                <viewController id="5Ce-KI-ICt" customClass="SignInViewController" customModule="finalProject" customModuleProvider="target" sceneMemberID="viewController">
                     <layoutGuides>
                         <viewControllerLayoutGuide type="top" id="wnk-dA-gTU"/>
                         <viewControllerLayoutGuide type="bottom" id="G7Z-8y-yRa"/>
@@ -34,6 +58,19 @@
                         <rect key="frame" x="0.0" y="0.0" width="600" height="600"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
+                            <toolbar opaque="NO" clearsContextBeforeDrawing="NO" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="r6Y-ll-reJ">
+                                <rect key="frame" x="0.0" y="0.0" width="320" height="44"/>
+                                <animations/>
+                                <items>
+                                    <barButtonItem style="plain" systemItem="flexibleSpace" id="a9N-dw-Xq8"/>
+                                    <barButtonItem title="Sign In" width="72" id="qw5-NX-tQO">
+                                        <connections>
+                                            <action selector="signInButtonPress:" destination="5Ce-KI-ICt" id="hUL-mr-RPW"/>
+                                        </connections>
+                                    </barButtonItem>
+                                    <barButtonItem style="plain" systemItem="flexibleSpace" id="zZh-LA-0Pd"/>
+                                </items>
+                            </toolbar>
                             <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="vBi-nl-bEn">
                                 <rect key="frame" x="0.0" y="0.0" width="240" height="128"/>
                                 <subviews>
@@ -61,13 +98,13 @@
                                         <rect key="frame" x="-25" y="-30" width="97" height="30"/>
                                         <animations/>
                                         <fontDescription key="fontDescription" type="system" pointSize="14"/>
-                                        <textInputTraits key="textInputTraits"/>
+                                        <textInputTraits key="textInputTraits" keyboardType="alphabet"/>
                                     </textField>
                                     <textField opaque="NO" clipsSubviews="YES" contentMode="scaleToFill" contentHorizontalAlignment="left" contentVerticalAlignment="center" borderStyle="roundedRect" placeholder="Password" textAlignment="natural" minimumFontSize="18" translatesAutoresizingMaskIntoConstraints="NO" id="Zbe-Gm-hhM">
                                         <rect key="frame" x="-25" y="-30" width="97" height="30"/>
                                         <animations/>
                                         <fontDescription key="fontDescription" type="system" pointSize="15"/>
-                                        <textInputTraits key="textInputTraits"/>
+                                        <textInputTraits key="textInputTraits" keyboardType="alphabet" secureTextEntry="YES"/>
                                     </textField>
                                 </subviews>
                                 <animations/>
@@ -117,15 +154,6 @@
                                     </mask>
                                 </variation>
                             </view>
-                            <toolbar opaque="NO" clearsContextBeforeDrawing="NO" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="r6Y-ll-reJ">
-                                <rect key="frame" x="0.0" y="0.0" width="320" height="44"/>
-                                <animations/>
-                                <items>
-                                    <barButtonItem style="plain" systemItem="flexibleSpace" id="a9N-dw-Xq8"/>
-                                    <barButtonItem title="Sign In" width="72" id="qw5-NX-tQO"/>
-                                    <barButtonItem style="plain" systemItem="flexibleSpace" id="zZh-LA-0Pd"/>
-                                </items>
-                            </toolbar>
                         </subviews>
                         <animations/>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
@@ -140,8 +168,8 @@
                         </constraints>
                         <variation key="default">
                             <mask key="subviews">
-                                <exclude reference="vBi-nl-bEn"/>
                                 <exclude reference="r6Y-ll-reJ"/>
+                                <exclude reference="vBi-nl-bEn"/>
                             </mask>
                             <mask key="constraints">
                                 <exclude reference="036-6p-omb"/>
@@ -155,8 +183,8 @@
                         </variation>
                         <variation key="widthClass=compact">
                             <mask key="subviews">
-                                <include reference="vBi-nl-bEn"/>
                                 <include reference="r6Y-ll-reJ"/>
+                                <include reference="vBi-nl-bEn"/>
                             </mask>
                             <mask key="constraints">
                                 <include reference="036-6p-omb"/>
@@ -169,10 +197,36 @@
                             </mask>
                         </variation>
                     </view>
+                    <connections>
+                        <outlet property="passwordField" destination="Zbe-Gm-hhM" id="EGM-pH-YNe"/>
+                        <outlet property="usernameField" destination="3DB-RA-bJF" id="f3h-HJ-Mc1"/>
+                    </connections>
                 </viewController>
-                <placeholder placeholderIdentifier="IBFirstResponder" id="cFy-c3-UOq" userLabel="First Responder" sceneMemberID="firstResponder"/>
             </objects>
             <point key="canvasLocation" x="-168" y="819"/>
         </scene>
+        <!--Global Lists-->
+        <scene sceneID="Y7M-3e-RRs">
+            <objects>
+                <viewController id="vTM-P4-8Gc" customClass="SecondViewController" customModule="finalProject" customModuleProvider="target" sceneMemberID="viewController">
+                    <layoutGuides>
+                        <viewControllerLayoutGuide type="top" id="8K6-wE-bks"/>
+                        <viewControllerLayoutGuide type="bottom" id="Rm1-zm-oFc"/>
+                    </layoutGuides>
+                    <view key="view" contentMode="scaleToFill" id="abk-xL-bZL">
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <animations/>
+                        <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
+                    </view>
+                    <tabBarItem key="tabBarItem" title="Global Lists" image="second" id="ubk-Vo-IBr"/>
+                </viewController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="XgB-N6-QSq" userLabel="First Responder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="1521" y="1040"/>
+        </scene>
     </scenes>
+    <resources>
+        <image name="first" width="30" height="30"/>
+        <image name="second" width="30" height="30"/>
+    </resources>
 </document>
