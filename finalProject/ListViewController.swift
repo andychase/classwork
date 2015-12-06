@@ -16,13 +16,18 @@ class ListViewController: UIViewController {
     @IBOutlet var table: UITableView!
     
     override func viewDidLoad() {
-            self.dataSource = ListModel(isGlobalListType: self.restorationIdentifier == "globalList")
+        self.dataSource = ListModel(table: table, isGlobalListType: self.restorationIdentifier == "globalList")
+        
             table.dataSource = self.dataSource
+            table.delegate = self.dataSource
     }
 
     override func viewWillAppear(animated: Bool) {
         super.viewWillAppear(animated)
-        
     }
+    override func viewDidAppear(animated: Bool) {
+        table.setEditing(true, animated: true)
+    }
+    
 }
 
