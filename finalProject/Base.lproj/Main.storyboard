@@ -3,6 +3,7 @@
     <dependencies>
         <deployment identifier="iOS"/>
         <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="9051"/>
+        <capability name="Alignment constraints with different attributes" minToolsVersion="5.1"/>
         <capability name="Constraints to layout margins" minToolsVersion="6.0"/>
     </dependencies>
     <scenes>
@@ -10,6 +11,7 @@
         <scene sceneID="yl2-sM-qoP">
             <objects>
                 <tabBarController id="49e-Tb-3d3" sceneMemberID="viewController">
+                    <navigationItem key="navigationItem" id="rmw-7e-C8i"/>
                     <nil key="simulatedBottomBarMetrics"/>
                     <tabBar key="tabBar" contentMode="scaleToFill" id="W28-zg-YXA">
                         <rect key="frame" x="0.0" y="975" width="768" height="49"/>
@@ -20,6 +22,7 @@
                     <connections>
                         <segue destination="T84-iY-8mm" kind="relationship" relationship="viewControllers" id="new-ya-iv8"/>
                         <segue destination="vTM-P4-8Gc" kind="relationship" relationship="viewControllers" id="7fp-C2-c2f"/>
+                        <segue destination="jAW-mz-zrE" kind="relationship" relationship="viewControllers" id="Ju5-pt-sQt"/>
                     </connections>
                 </tabBarController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="HuB-VB-40B" sceneMemberID="firstResponder"/>
@@ -35,20 +38,20 @@
                         <viewControllerLayoutGuide type="bottom" id="rT4-vL-Pcw"/>
                     </layoutGuides>
                     <view key="view" contentMode="scaleToFill" id="RyW-hn-2Jz">
+                        <rect key="frame" x="0.0" y="0.0" width="600" height="600"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <animations/>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
                     </view>
-                    <tabBarItem key="tabBarItem" title="My List" image="first" id="o9q-Zk-dcm"/>
+                    <tabBarItem key="tabBarItem" title="My List" image="second" id="o9q-Zk-dcm"/>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="MlC-cT-DXP" userLabel="First Responder" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="1521" y="356"/>
+            <point key="canvasLocation" x="1521" y="380"/>
         </scene>
         <!--Sign In View Controller-->
         <scene sceneID="pUU-gY-ZSe">
             <objects>
-                <placeholder placeholderIdentifier="IBFirstResponder" id="cFy-c3-UOq" userLabel="First Responder" sceneMemberID="firstResponder"/>
                 <viewController id="5Ce-KI-ICt" customClass="SignInViewController" customModule="finalProject" customModuleProvider="target" sceneMemberID="viewController">
                     <layoutGuides>
                         <viewControllerLayoutGuide type="top" id="wnk-dA-gTU"/>
@@ -158,11 +161,11 @@
                                         <exclude reference="TbP-Pv-cqR"/>
                                         <exclude reference="bEn-i2-N3b"/>
                                         <exclude reference="yu5-jK-SP0"/>
+                                        <exclude reference="q4f-Fa-rad"/>
                                         <exclude reference="Sxj-aY-ffy"/>
                                         <exclude reference="h8v-dP-6py"/>
                                         <exclude reference="ku2-0u-ioW"/>
                                         <exclude reference="uuz-d2-FcC"/>
-                                        <exclude reference="q4f-Fa-rad"/>
                                     </mask>
                                 </variation>
                                 <variation key="widthClass=compact">
@@ -180,11 +183,11 @@
                                         <include reference="TbP-Pv-cqR"/>
                                         <include reference="bEn-i2-N3b"/>
                                         <include reference="yu5-jK-SP0"/>
+                                        <include reference="q4f-Fa-rad"/>
                                         <include reference="Sxj-aY-ffy"/>
                                         <include reference="h8v-dP-6py"/>
                                         <include reference="ku2-0u-ioW"/>
                                         <include reference="uuz-d2-FcC"/>
-                                        <include reference="q4f-Fa-rad"/>
                                     </mask>
                                 </variation>
                             </view>
@@ -205,12 +208,12 @@
                                 <exclude reference="vBi-nl-bEn"/>
                             </mask>
                             <mask key="constraints">
-                                <exclude reference="Zrp-T4-Oww"/>
-                                <exclude reference="cei-Fn-9v8"/>
-                                <exclude reference="q5o-D1-cq5"/>
                                 <exclude reference="OrT-mV-dOe"/>
                                 <exclude reference="pFD-DE-vJx"/>
                                 <exclude reference="uND-E9-Mbg"/>
+                                <exclude reference="Zrp-T4-Oww"/>
+                                <exclude reference="cei-Fn-9v8"/>
+                                <exclude reference="q5o-D1-cq5"/>
                             </mask>
                         </variation>
                         <variation key="widthClass=compact">
@@ -219,23 +222,26 @@
                                 <include reference="vBi-nl-bEn"/>
                             </mask>
                             <mask key="constraints">
-                                <include reference="Zrp-T4-Oww"/>
-                                <include reference="cei-Fn-9v8"/>
-                                <include reference="q5o-D1-cq5"/>
                                 <include reference="OrT-mV-dOe"/>
                                 <include reference="pFD-DE-vJx"/>
                                 <include reference="uND-E9-Mbg"/>
+                                <include reference="Zrp-T4-Oww"/>
+                                <include reference="cei-Fn-9v8"/>
+                                <include reference="q5o-D1-cq5"/>
                             </mask>
                         </variation>
                     </view>
+                    <navigationItem key="navigationItem" id="5Wy-af-eBg"/>
                     <connections>
                         <outlet property="notificationLabel" destination="kFk-Ht-pii" id="VpD-nc-q8w"/>
                         <outlet property="passwordField" destination="Zbe-Gm-hhM" id="EGM-pH-YNe"/>
                         <outlet property="usernameField" destination="3DB-RA-bJF" id="f3h-HJ-Mc1"/>
+                        <segue destination="49e-Tb-3d3" kind="show" identifier="gotoLists" id="GBH-7w-9R6"/>
                     </connections>
                 </viewController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="cFy-c3-UOq" userLabel="First Responder" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="-168" y="819"/>
+            <point key="canvasLocation" x="-150" y="804"/>
         </scene>
         <!--Global Lists-->
         <scene sceneID="Y7M-3e-RRs">
@@ -246,6 +252,7 @@
                         <viewControllerLayoutGuide type="bottom" id="Rm1-zm-oFc"/>
                     </layoutGuides>
                     <view key="view" contentMode="scaleToFill" id="abk-xL-bZL">
+                        <rect key="frame" x="0.0" y="0.0" width="600" height="600"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <animations/>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
@@ -254,7 +261,27 @@
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="XgB-N6-QSq" userLabel="First Responder" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="1521" y="1040"/>
+            <point key="canvasLocation" x="1521" y="1140"/>
+        </scene>
+        <!--Account-->
+        <scene sceneID="rP2-ye-ghS">
+            <objects>
+                <viewController id="jAW-mz-zrE" customClass="SecondViewController" customModule="finalProject" customModuleProvider="target" sceneMemberID="viewController">
+                    <layoutGuides>
+                        <viewControllerLayoutGuide type="top" id="sl2-GT-KGx"/>
+                        <viewControllerLayoutGuide type="bottom" id="iQQ-Bd-OSi"/>
+                    </layoutGuides>
+                    <view key="view" contentMode="scaleToFill" id="XWr-qI-LpB">
+                        <rect key="frame" x="0.0" y="0.0" width="600" height="600"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <animations/>
+                        <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
+                    </view>
+                    <tabBarItem key="tabBarItem" title="Account" image="first" id="KAt-rD-3OB"/>
+                </viewController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="mNJ-79-ZWE" userLabel="First Responder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="2253" y="728"/>
         </scene>
     </scenes>
     <resources>

@@ -31,5 +31,6 @@ class SignInViewController: UIViewController {
         notificationLabel.hidden = false;
         notificationLabel.text = "Sign in Success!"
         notificationLabel.textColor = UIColor.greenColor()
+        self.performSegueWithIdentifier("gotoLists", sender: self)
     }
 }
