@@ -15,6 +15,10 @@ class SignInViewController: UIViewController {
     @IBOutlet weak var passwordField: UITextField!
     @IBOutlet weak var notificationLabel: UILabel!
     
+    override func viewWillAppear(animated: Bool) {
+        notificationLabel.hidden = true
+    }
+    
     @IBAction func signInButtonPress(sender: UIButton) {
 //        let parameters = ["username": usernameField.text!, "password": passwordField.text!]
 //        Alamofire.request(.POST, "https://requestbin.herokuapp.com/1atd5h51", parameters: parameters)
