@@ -168,6 +168,11 @@
                                             <action selector="signInButtonPress:" destination="5Ce-KI-ICt" id="hUL-mr-RPW"/>
                                         </connections>
                                     </barButtonItem>
+                                    <barButtonItem title="Register" id="55V-aT-bO4">
+                                        <connections>
+                                            <action selector="registerButtonPress:" destination="5Ce-KI-ICt" id="ngI-IY-E6p"/>
+                                        </connections>
+                                    </barButtonItem>
                                     <barButtonItem style="plain" systemItem="flexibleSpace" id="zZh-LA-0Pd"/>
                                 </items>
                             </toolbar>
