@@ -261,12 +261,12 @@
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="XgB-N6-QSq" userLabel="First Responder" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="1521" y="1140"/>
+            <point key="canvasLocation" x="1521" y="1228"/>
         </scene>
         <!--Account-->
         <scene sceneID="rP2-ye-ghS">
             <objects>
-                <viewController id="jAW-mz-zrE" customClass="SecondViewController" customModule="finalProject" customModuleProvider="target" sceneMemberID="viewController">
+                <viewController id="jAW-mz-zrE" customClass="AccountViewController" customModule="finalProject" customModuleProvider="target" sceneMemberID="viewController">
                     <layoutGuides>
                         <viewControllerLayoutGuide type="top" id="sl2-GT-KGx"/>
                         <viewControllerLayoutGuide type="bottom" id="iQQ-Bd-OSi"/>
@@ -274,14 +274,46 @@
                     <view key="view" contentMode="scaleToFill" id="XWr-qI-LpB">
                         <rect key="frame" x="0.0" y="0.0" width="600" height="600"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <subviews>
+                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="bhB-lW-Cew">
+                                <rect key="frame" x="-23" y="-15" width="46" height="30"/>
+                                <animations/>
+                                <state key="normal" title="Sign Out"/>
+                                <connections>
+                                    <action selector="pressSignOutButton:" destination="jAW-mz-zrE" eventType="touchUpInside" id="0iS-Am-ExL"/>
+                                </connections>
+                            </button>
+                        </subviews>
                         <animations/>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
+                        <constraints>
+                            <constraint firstItem="bhB-lW-Cew" firstAttribute="centerX" secondItem="XWr-qI-LpB" secondAttribute="centerX" id="f9t-wa-Fwv"/>
+                            <constraint firstItem="bhB-lW-Cew" firstAttribute="centerY" secondItem="XWr-qI-LpB" secondAttribute="centerY" id="hqf-z9-YfM"/>
+                        </constraints>
+                        <variation key="default">
+                            <mask key="subviews">
+                                <exclude reference="bhB-lW-Cew"/>
+                            </mask>
+                            <mask key="constraints">
+                                <exclude reference="f9t-wa-Fwv"/>
+                                <exclude reference="hqf-z9-YfM"/>
+                            </mask>
+                        </variation>
+                        <variation key="widthClass=compact">
+                            <mask key="subviews">
+                                <include reference="bhB-lW-Cew"/>
+                            </mask>
+                            <mask key="constraints">
+                                <include reference="f9t-wa-Fwv"/>
+                                <include reference="hqf-z9-YfM"/>
+                            </mask>
+                        </variation>
                     </view>
                     <tabBarItem key="tabBarItem" title="Account" image="first" id="KAt-rD-3OB"/>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="mNJ-79-ZWE" userLabel="First Responder" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="2253" y="728"/>
+            <point key="canvasLocation" x="2232" y="804"/>
         </scene>
     </scenes>
     <resources>
