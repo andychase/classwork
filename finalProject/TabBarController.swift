@@ -9,7 +9,7 @@
 import UIKit
 
 class TabBarController: UITabBarController {
-    var userId:Int!
+    var userId:String!
 
     override func viewDidLoad() {
         self.viewControllers!.forEach({ (v:UIViewController) -> () in

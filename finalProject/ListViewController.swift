@@ -9,7 +9,7 @@
 import UIKit
 
 class ListViewController: UIViewController {
-    var userId:Int!
+    var userId:String!
     var listType:Bool!
     var dataSource:ListModel!
 
@@ -30,6 +30,12 @@ class ListViewController: UIViewController {
         table.setEditing(true, animated: true)
     }
     @IBAction func addButtonPress(sender: AnyObject) {
+        if let text = inputField.text {
+            if text != "" {
+                self.dataSource.addItem(text)
+                inputField.text = ""
+            }
+        }
 
     }
     
