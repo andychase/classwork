@@ -7,25 +7,25 @@
 //
 
 import UIKit
+import Alamofire
 
 class SignInViewController: UIViewController {
     
     @IBOutlet weak var usernameField: UITextField!
     @IBOutlet weak var passwordField: UITextField!
     
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        // Do any additional setup after loading the view, typically from a nib.
-    }
-    
-    override func didReceiveMemoryWarning() {
-        super.didReceiveMemoryWarning()
-        // Dispose of any resources that can be recreated.
-    }
-    
-    
-    @IBAction func signInButtonPress(sender: AnyObject) {
-        
+    @IBAction func signInButtonPress(sender: UIButton) {
+        let parameters = ["username": usernameField.text!, "password": passwordField.text!]
+        Alamofire.request(.POST, "https://requestbin.herokuapp.com/1atd5h51", parameters: parameters)
+            .responseJSON { response in
+                print(response.request)  // original URL request
+                print(response.response) // URL response
+                print(response.data)     // server data
+                print(response.result)   // result of response serialization
+                
+                if let JSON = response.result.value {
+                    print("JSON: \(JSON)")
+                }
+        }
     }
 }
-
