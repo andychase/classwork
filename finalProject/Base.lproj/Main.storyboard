@@ -32,17 +32,13 @@
         <!--My List-->
         <scene sceneID="2bL-Mv-OMx">
             <objects>
-                <viewController id="T84-iY-8mm" customClass="FirstViewController" customModule="finalProject" customModuleProvider="target" sceneMemberID="viewController">
-                    <layoutGuides>
-                        <viewControllerLayoutGuide type="top" id="3J1-fW-v2m"/>
-                        <viewControllerLayoutGuide type="bottom" id="rT4-vL-Pcw"/>
-                    </layoutGuides>
-                    <view key="view" contentMode="scaleToFill" id="RyW-hn-2Jz">
-                        <rect key="frame" x="0.0" y="0.0" width="600" height="600"/>
-                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                <viewController id="T84-iY-8mm" customClass="ListViewController" sceneMemberID="viewController">
+                    <tableView key="view" clipsSubviews="YES" contentMode="scaleToFill" alwaysBounceVertical="YES" dataMode="prototypes" style="plain" separatorStyle="default" rowHeight="44" sectionHeaderHeight="28" sectionFooterHeight="28" id="dIA-Xf-ug5">
+                        <rect key="frame" x="0.0" y="0.0" width="240" height="128"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                         <animations/>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
-                    </view>
+                    </tableView>
                     <tabBarItem key="tabBarItem" title="My List" image="second" id="o9q-Zk-dcm"/>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="MlC-cT-DXP" userLabel="First Responder" sceneMemberID="firstResponder"/>
@@ -246,17 +242,13 @@
         <!--Global Lists-->
         <scene sceneID="Y7M-3e-RRs">
             <objects>
-                <viewController id="vTM-P4-8Gc" customClass="SecondViewController" customModule="finalProject" customModuleProvider="target" sceneMemberID="viewController">
-                    <layoutGuides>
-                        <viewControllerLayoutGuide type="top" id="8K6-wE-bks"/>
-                        <viewControllerLayoutGuide type="bottom" id="Rm1-zm-oFc"/>
-                    </layoutGuides>
-                    <view key="view" contentMode="scaleToFill" id="abk-xL-bZL">
-                        <rect key="frame" x="0.0" y="0.0" width="600" height="600"/>
-                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                <viewController id="vTM-P4-8Gc" customClass="ListViewController" sceneMemberID="viewController">
+                    <tableView key="view" clipsSubviews="YES" contentMode="scaleToFill" alwaysBounceVertical="YES" dataMode="prototypes" style="plain" separatorStyle="default" rowHeight="44" sectionHeaderHeight="28" sectionFooterHeight="28" id="lRE-qH-HcX">
+                        <rect key="frame" x="0.0" y="0.0" width="240" height="128"/>
+                        <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                         <animations/>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
-                    </view>
+                    </tableView>
                     <tabBarItem key="tabBarItem" title="Global Lists" image="second" id="ubk-Vo-IBr"/>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="XgB-N6-QSq" userLabel="First Responder" sceneMemberID="firstResponder"/>
