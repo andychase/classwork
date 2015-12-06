@@ -10,13 +10,19 @@ import UIKit
 
 class ListViewController: UIViewController {
     var userId:Int!
-    var global:Bool!
+    var listType:Bool!
+    var dataSource:ListModel!
+
+    @IBOutlet var table: UITableView!
+    
+    override func viewDidLoad() {
+            self.dataSource = ListModel(isGlobalListType: self.restorationIdentifier == "globalList")
+            table.dataSource = self.dataSource
+    }
 
     override func viewWillAppear(animated: Bool) {
         super.viewWillAppear(animated)
-        if let id = self.userId {
-            print(id)
-        }
+        
     }
 }
 

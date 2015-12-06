@@ -36,7 +36,7 @@ class SignInViewController: UIViewController {
         notificationLabel.text = "Sign in Success!"
         notificationLabel.textColor = UIColor.greenColor()
         
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, Int64(NSEC_PER_SEC)), dispatch_get_main_queue()) {
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0), dispatch_get_main_queue()) {
             self.performSegueWithIdentifier("gotoLists", sender: 1)
         }
     }
