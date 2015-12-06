@@ -17,14 +17,19 @@ class ListViewController: UIViewController {
     @IBOutlet weak var inputField: UITextField!
     
     override func viewDidLoad() {
-        self.dataSource = ListModel(table: table, isGlobalListType: self.restorationIdentifier == "globalList")
+        self.dataSource = ListModel(
+            table: table,
+            isGlobalListType: self.restorationIdentifier == "globalList",
+            userId: userId
+        )
         
-            table.dataSource = self.dataSource
-            table.delegate = self.dataSource
+        table.dataSource = self.dataSource
+        table.delegate = self.dataSource
     }
 
     override func viewWillAppear(animated: Bool) {
         super.viewWillAppear(animated)
+        self.dataSource!.loadRows()
     }
     override func viewDidAppear(animated: Bool) {
         table.setEditing(true, animated: true)
@@ -33,6 +38,7 @@ class ListViewController: UIViewController {
         if let text = inputField.text {
             if text != "" {
                 self.dataSource.addItem(text)
+                self.dataSource.saveRows()
                 inputField.text = ""
             }
         }

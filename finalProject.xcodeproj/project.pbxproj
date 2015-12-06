@@ -12,6 +12,7 @@
 		4B20497E1C1402E200134DAB /* ListViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B20497D1C1402E200134DAB /* ListViewController.swift */; };
 		4B2049821C140ED600134DAB /* TabBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B2049811C140ED600134DAB /* TabBarController.swift */; };
 		4B2049881C1431E400134DAB /* ListModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B2049871C1431E400134DAB /* ListModel.swift */; };
+		4B2049921C14ADEF00134DAB /* ListWebModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B2049911C14ADEF00134DAB /* ListWebModel.swift */; };
 		4B3EF0601C12F85700744166 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B3EF05F1C12F85700744166 /* AppDelegate.swift */; };
 		4B3EF0671C12F85700744166 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 4B3EF0651C12F85700744166 /* Main.storyboard */; };
 		4B3EF06C1C12F85700744166 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 4B3EF06A1C12F85700744166 /* LaunchScreen.storyboard */; };
@@ -25,6 +26,7 @@
 		4B20497D1C1402E200134DAB /* ListViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ListViewController.swift; sourceTree = "<group>"; };
 		4B2049811C140ED600134DAB /* TabBarController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TabBarController.swift; sourceTree = "<group>"; };
 		4B2049871C1431E400134DAB /* ListModel.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ListModel.swift; sourceTree = "<group>"; };
+		4B2049911C14ADEF00134DAB /* ListWebModel.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ListWebModel.swift; sourceTree = "<group>"; };
 		4B3EF05C1C12F85700744166 /* finalProject.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = finalProject.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4B3EF05F1C12F85700744166 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		4B3EF0661C12F85700744166 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
@@ -76,6 +78,7 @@
 				4BAD108A1C13BA810021AFCD /* SignInViewController.swift */,
 				4B20497B1C13E1C000134DAB /* AccountViewController.swift */,
 				4B2049811C140ED600134DAB /* TabBarController.swift */,
+				4B2049911C14ADEF00134DAB /* ListWebModel.swift */,
 			);
 			path = finalProject;
 			sourceTree = "<group>";
@@ -174,6 +177,7 @@
 				4B20497E1C1402E200134DAB /* ListViewController.swift in Sources */,
 				4B2049881C1431E400134DAB /* ListModel.swift in Sources */,
 				4B2049821C140ED600134DAB /* TabBarController.swift in Sources */,
+				4B2049921C14ADEF00134DAB /* ListWebModel.swift in Sources */,
 				4B3EF0601C12F85700744166 /* AppDelegate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
