@@ -35,9 +35,18 @@ class SignInViewController: UIViewController {
         notificationLabel.hidden = false;
         notificationLabel.text = "Sign in Success!"
         notificationLabel.textColor = UIColor.greenColor()
-
+        
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, Int64(NSEC_PER_SEC)), dispatch_get_main_queue()) {
-            self.performSegueWithIdentifier("gotoLists", sender: self)
+            self.performSegueWithIdentifier("gotoLists", sender: 1)
+        }
+    }
+    
+    
+    override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {
+        if (segue.identifier == "gotoLists") {
+            let dest:TabBarController = segue.destinationViewController as! TabBarController
+            let userId = sender as! Int
+            dest.userId = userId
         }
     }
 }

@@ -11,7 +11,7 @@ import UIKit
 class AccountViewController: UIViewController {
     
     @IBAction func pressSignOutButton(sender: AnyObject) {
-self.dismissViewControllerAnimated(true, completion: {});
+        self.dismissViewControllerAnimated(true, completion: {});
     }
 }
 

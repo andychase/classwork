@@ -10,7 +10,7 @@
         <!--Tab Bar Controller-->
         <scene sceneID="yl2-sM-qoP">
             <objects>
-                <tabBarController id="49e-Tb-3d3" sceneMemberID="viewController">
+                <tabBarController id="49e-Tb-3d3" customClass="TabBarController" customModule="finalProject" customModuleProvider="target" sceneMemberID="viewController">
                     <navigationItem key="navigationItem" id="rmw-7e-C8i"/>
                     <nil key="simulatedBottomBarMetrics"/>
                     <tabBar key="tabBar" contentMode="scaleToFill" id="W28-zg-YXA">
@@ -32,7 +32,7 @@
         <!--My List-->
         <scene sceneID="2bL-Mv-OMx">
             <objects>
-                <viewController id="T84-iY-8mm" customClass="ListViewController" sceneMemberID="viewController">
+                <viewController storyboardIdentifier="myList" id="T84-iY-8mm" customClass="ListViewController" customModule="finalProject" customModuleProvider="target" sceneMemberID="viewController">
                     <tableView key="view" clipsSubviews="YES" contentMode="scaleToFill" alwaysBounceVertical="YES" dataMode="prototypes" style="plain" separatorStyle="default" rowHeight="44" sectionHeaderHeight="28" sectionFooterHeight="28" id="dIA-Xf-ug5">
                         <rect key="frame" x="0.0" y="0.0" width="240" height="128"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
@@ -242,7 +242,7 @@
         <!--Global Lists-->
         <scene sceneID="Y7M-3e-RRs">
             <objects>
-                <viewController id="vTM-P4-8Gc" customClass="ListViewController" sceneMemberID="viewController">
+                <viewController storyboardIdentifier="globalList" id="vTM-P4-8Gc" customClass="ListViewController" customModule="finalProject" customModuleProvider="target" sceneMemberID="viewController">
                     <tableView key="view" clipsSubviews="YES" contentMode="scaleToFill" alwaysBounceVertical="YES" dataMode="prototypes" style="plain" separatorStyle="default" rowHeight="44" sectionHeaderHeight="28" sectionFooterHeight="28" id="lRE-qH-HcX">
                         <rect key="frame" x="0.0" y="0.0" width="240" height="128"/>
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
