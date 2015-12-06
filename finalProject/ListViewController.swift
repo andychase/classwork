@@ -14,6 +14,7 @@ class ListViewController: UIViewController {
     var dataSource:ListModel!
 
     @IBOutlet var table: UITableView!
+    @IBOutlet weak var inputField: UITextField!
     
     override func viewDidLoad() {
         self.dataSource = ListModel(table: table, isGlobalListType: self.restorationIdentifier == "globalList")
@@ -28,6 +29,10 @@ class ListViewController: UIViewController {
     override func viewDidAppear(animated: Bool) {
         table.setEditing(true, animated: true)
     }
+    @IBAction func addButtonPress(sender: AnyObject) {
+
+    }
+    
     
 }
 
