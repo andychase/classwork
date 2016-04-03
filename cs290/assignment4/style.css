@@ -1,0 +1,48 @@
+header nav {
+    width: 100%;
+    background-color: lightgrey;
+}
+header nav ul {
+    list-style: none;
+    margin: 0;
+    display: inline;
+}
+header nav ul li {
+    display: inline-block;
+}
+header nav ul li a {
+    display: inline-block;
+    margin: 4px;
+    padding: 6px;
+    border: 1px solid #3e3e3e;
+    border-radius: 3px;
+}
+.welcome {
+    float: right;
+}
+
+footer {
+    margin-top: 40px;
+    font-size: 42px;
+    opacity: .2;
+    font-style: italic;
+}
+.main {
+    width: 400px;
+    margin: 30px auto;
+}
+input {
+    display: block;
+}
+label input {
+    display: inline;
+    margin-left: 4px;
+}
+label {
+    display: block;
+    margin: 10px;
+}
+table tr td, table tr th {
+    border: 1px solid grey;
+    padding: 5px;
+}

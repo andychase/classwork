@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="utf-8">
+    <title>Assignment 1 - Page 2</title>
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/3.0.3/normalize.css">
+    <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+<body>
+<header>
+    <nav class="top-nav">
+        <ul>
+            <li><a href="pageTwo.html">My Account</a></li>
+            <li><a href="#">Wish List</a></li>
+            <li><a href="#">Shopping Cart</a></li>
+            <li><a href="#">Checkout</a></li>
+        </ul>
+    </nav>
+    <h1>Art Store</h1>
+    <nav class="art-store-about">
+        <ul>
+            <li><a href="pageOne.html">Home</a></li>
+            <li><a href="#">About Us</a></li>
+            <li><a href="#">Art Works</a></li>
+            <li><a href="#">Artists</a></li>
+        </ul>
+    </nav>
+</header>
+<main>
+    <form method="post" action="http://web.engr.oregonstate.edu/~schutfoj/cs290/process.php">
+        <h2>Customer Registration</h2>
+
+        <h4>1. User Info</h4>
+        <label><span>First Name</span><input type="text" name="first"/></label>
+        <label><span>Last Name</span><input type="text" name="last"/></label>
+        <label class="input-email"><span>Email</span><input type="email" name="email"
+                                                            placeholder="format for email is xxx@yyy.zzz"/></label>
+        <label><span>Password</span><input type="text" name="pass1" placeholder="at least 8 characters"/></label>
+        <label><span>Password Repeat</span><input type="text" name="pass2" placeholder="at least 8 characters"/></label>
+
+        <h4>2. Location</h4>
+        <label class="input-address"><span>Address</span><input type="text" name="address"/></label>
+        <label><span>City</span><input type="text" name="city"/></label>
+        <label><span>State</span><input type="text" name="state"/></label>
+        <label><span>Zip</span><input type="text" name="zip"/></label>
+        <label><span>Phone</span><input type="text" name="phone" placeholder="NNN-NNN-NNNN"/></label>
+
+        <label><span>Country</span>
+            <select>
+                <option value="canada">Canada</option>
+                <option value="united_states">United States</option>
+            </select>
+        </label>
+        <span class="label-title">Continent</span>
+        <label class="continent">
+            <input type="radio" name="continent" value="North America"/>North America
+        </label>
+        <label class="continent">
+            <input type="radio" name="continent" value="Europe"/>Europe
+        </label>
+        <label class="continent">
+            <input type="radio" name="continent" value="South America"/>South America
+        </label>
+
+
+        <h4>3. Personal Details</h4>
+        <label><span>Birth Day</span>
+            <input type="date" name="birthday"/>
+        </label>
+        <label><span>Favorite Color</span>
+            <input type="color" name="favorite"/>
+        </label>
+        <label><span>Interest in Art</span>
+            Minimal<input type="range" min="0" max="10" step="1" name="interest"/>Love it!
+        </label>
+
+        <h4>4. All Done</h4>
+        <label>
+            <input type="checkbox" name="accept"/> I agree to the <a href="#">Terms of the Site</a>
+        </label>
+        <button type="submit" class="sign-me-up"><img src="images/button_ok.png" alt="ok"/> Sign me up!</button>
+    </form>
+</main>
+<footer>
+    All images are copyright to their owners.
+    This is just a hypothetical site copyright 2014 &copy; Copyright Art Store
+</footer>
+</body>
+</html>
