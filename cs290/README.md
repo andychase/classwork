@@ -1,0 +1,1 @@
+This was a introduction to web development class and involved manipulating html and javascript to meet certain requirements.
