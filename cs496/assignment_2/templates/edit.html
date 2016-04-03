@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block body %}
+  <form method="post">
+    <a href="/"><i class="fa fa-arrow-left"></i>back</a>
+
+    <h2>Choose an image</h2>
+
+    <div class="row">
+      <div class="six columns">
+        <label class="image-selection">
+          <input type="radio" name="images" value="3vKIGia" {% if vars.image == '3vKIGia' %}checked{% endif %}>
+
+      <span class="image-clip u-max-full-width">
+        <img src="https://i.imgur.com/3vKIGia.jpg">
+      </span>
+        </label>
+      </div>
+      <div class="six columns">
+        <label class="image-selection">
+          <input id="option-three" type="radio" name="images" value="b1cILHt"
+                 {% if vars.image == 'b1cILHt' %}checked{% endif %}>
+      <span class="image-clip u-max-full-width">
+        <img src="https://i.imgur.com/b1cILHt.jpg">
+      </span>
+        </label>
+      </div>
+    </div>
+
+
+    <h2>Choose some alterations</h2>
+
+    <div class="row">
+      <div class="six columns">
+        <label>
+          <input type="checkbox" name="upside_down" value="" {% if vars.upside_down %}checked{% endif %}>
+          Upside down
+        </label>
+        <label>
+          Stretch
+          <input type="range" name="stretch" min="0" max="10" value="{{ vars.stretch }}">
+        </label>
+      </div>
+      <div class="six columns">
+        <label>
+          Words
+          <input type="text" name="words" value="{{ vars.words }}">
+        </label>
+        <label>Color Shift
+          <select name="color_change">
+            <option value="" {% if vars.color_change == "" %}selected{% endif %}>None</option>
+            <option value="g" {% if vars.color_change == "g" %}selected{% endif %}>Greenify</option>
+            <option value="b" {% if vars.color_change == "b" %}selected{% endif %}>Blueify</option>
+            <option value="o" {% if vars.color_change == "o" %}selected{% endif %}>Orangify</option>
+          </select>
+        </label>
+      </div>
+      <input class="button-primary" type="submit" value="Submit">
+    </div>
+
+  </form>
+{% endblock %}
