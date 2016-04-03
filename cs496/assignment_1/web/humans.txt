@@ -1,0 +1,27 @@
+# humanstxt.org/
+
+# TEAM
+
+    Andy Chase -- Software Developer
+
+# TECHNOLOGY COLOPHON
+
+    CSS3, HTML5
+
+    Flat UI Colors
+    https://flatuicolors.com/
+
+    Font Awesome
+    https://fortawesome.github.io/Font-Awesome/
+
+    PHP Documenation
+    https://secure.php.net/manual/en/function.rand.php
+
+    CSS Transition
+    http://css3.bradshawenterprises.com/transitions/
+
+    Google jQuery CDN
+    https://developers.google.com/speed/libraries/?hl=en
+
+    HTML5 Boilerplate
+    https://html5boilerplate.com/
