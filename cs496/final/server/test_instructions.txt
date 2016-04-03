@@ -1,0 +1,9 @@
+This server has been set up to be tested using the doctest system. Simply run:
+
+python3 list_server.py
+
+to run the tests. No result means a clean run.
+
+To run the server use:
+
+python3 list_server.py serv
