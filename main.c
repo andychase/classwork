@@ -6,12 +6,15 @@ REFERENCES:
 * http://mij.oltrelinux.com/devel/unixprg/
 * https://stackoverflow.com/questions/1620918/cmake-and-libpthread
 * http://www.tutorialspoint.com/cprogramming/c_structures.htm
+* https://stackoverflow.com/questions/12657962/how-do-i-generate-a-random-number-between-two-variables-that-i-have-stored
+* https://stackoverflow.com/questions/4975340/int-to-unsigned-int-conversion
 
 */
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include "get_random.h"
 
 #define NUM_THREADS    2
 
@@ -36,18 +39,28 @@ void *consumer(void *threadId) {
         if (ret == 0)
             break;
         sleep(work_message.workTime);
-        printf("Thread #%ld consumed %d. Took %d seconds.\n", tid, work_message.unitNumber, work_message.workTime);
+        printf("Thread #%ld consumed %u. Took %u seconds.\n", tid, work_message.unitNumber, work_message.workTime);
 
     };
     pthread_exit(NULL);
 }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wmissing-noreturn"
+
 void producer() {
-    struct WorkUnit producer_message = {.unitNumber = 1, .workTime = 1};
-    write(writePipe, &producer_message, sizeof(struct WorkUnit));
-    producer_message.unitNumber++;
-    close(writePipe);
+    struct WorkUnit producerMessage;
+    unsigned int producerWaitTime;
+    for (; ;) {
+        producerMessage.unitNumber = get_random();
+        producerMessage.workTime = get_random_between(2, 9);
+        producerWaitTime = get_random_between(3, 7);
+        write(writePipe, &producerMessage, sizeof(struct WorkUnit));
+        sleep(producerWaitTime);
+    }
 }
+
+#pragma clang diagnostic pop
 
 int main(int argc, char *argv[]) {
     pthread_t threads[NUM_THREADS];
