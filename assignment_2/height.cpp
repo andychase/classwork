@@ -2,11 +2,6 @@
 
 #include "settings.h"
 
-#define XMIN     0.
-#define XMAX     3.
-#define YMIN     0.
-#define YMAX     3.
-
 #define Z00    0.
 #define Z10    1.
 #define Z20    0.

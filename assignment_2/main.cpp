@@ -1,36 +1,40 @@
-/* Copied from: http://web.engr.oregonstate.edu/~mjb/cs575/Projects/proj00.html */
+/* Copied from: http://web.engr.oregonstate.edu/~mjb/cs575/Projects/proj01.html */
 #include <omp.h>
 #include <stdio.h>
 #include "settings.h"
+#include "height.cpp"
 
-int main() {
+float Height(int, int);
 
-    float *A = new float[ARRAYSIZE];
-    float *B = new float[ARRAYSIZE];
-    float *C = new float[ARRAYSIZE];
 
-    omp_set_num_threads(NUMT);
-    fprintf(stderr, "Using %d threads\n", NUMT);
+int main(int argc, char *argv[]) {
+    printf("NUMT, NUMS, sum, MegaHeightsPerSec");
+    for (NUMT = 1; NUMT <= 8; NUMT++) {
+        for (NUMS = 2; NUMS <= 16384; NUMS = NUMS*2) {
+            double start_time = omp_get_wtime();
+            omp_set_num_threads(NUMT);
 
-    double maxmmults = 0.;
-    double summmults = 0.;
 
-    for (int t = 0; t < NUMTRIES; t++) {
-        double time0 = omp_get_wtime();
+            const double fullTileArea = (((XMAX - XMIN) / (float) (NUMS - 1)) * ((YMAX - YMIN) / (float) (NUMS - 1)));
 
-#pragma omp parallel for
-        for (int i = 0; i < ARRAYSIZE; i++) {
-            C[i] = A[i] * B[i];
+            float weight = 1;
+            float sum = 0;
+
+#pragma omp parallel for collapse(2) private(weight) reduction(+:sum)
+            for (int iv = 0; iv < NUMS; iv++) {
+                for (int iu = 0; iu < NUMS; iu++) {
+                    if ((iv == 0 || iv == NUMS) && (iu == 0 || iu == NUMS))
+                        weight = .25;
+                    else if ((iv == 0 || iv == NUMS) || (iu == 0 || iu == NUMS))
+                        weight = .5;
+                    else
+                        weight = 1;
+                    sum += fullTileArea * weight * Height(iv, iu);
+                }
+            }
+            double end_time = omp_get_wtime();
+            double MegaHeightsPerSec = NUMS*NUMS / (end_time - start_time) / 1000000;
+            printf("%i, %i, %f, %8.2lf\n", NUMT, NUMS, sum, MegaHeightsPerSec);
         }
-
-        double time1 = omp_get_wtime();
-        double mmults = (double) ARRAYSIZE / (time1 - time0) / 1000000.;
-        summmults += mmults;
-        if (mmults > maxmmults)
-            maxmmults = mmults;
     }
-    printf("   Peak Performance = %8.2lf MegaMults/Sec\n", maxmmults);
-    printf("Average Performance = %8.2lf MegaMults/Sec\n", summmults / (double) NUMTRIES);
-
-    return 0;
 }
