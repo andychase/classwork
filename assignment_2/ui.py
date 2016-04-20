@@ -1,3 +1,6 @@
+import sys
+
+
 use_ascii = True
 
 if use_ascii:
@@ -27,7 +30,7 @@ philosopher_mapping = {
 
 fork_mapping = {
     True: fork_icon,
-    False: ""
+    False: " "
 }
 
 forks = [
@@ -42,9 +45,17 @@ forks = [
 def get_table():
     fork_display = [fork_mapping[fork] for fork in forks]
     phi_mapping = [philosopher_mapping[i] for i in philosophers]
-    last_fork = "  {}".format(fork_mapping[forks[-1]])
-    return " ".join(" ".join(_) for _ in zip(fork_display, phi_mapping)) + last_fork
+    return " ".join(" ".join(_) for _ in zip(fork_display, phi_mapping)) + "  "
 
 
-def ui():
-    print(get_table())
+def ui(ui_queue):
+    while True:
+        ui_change = ui_queue.get()
+        status_change, index, change = ui_change
+        if status_change:
+            philosophers[index] = change
+            sys.stdout.write("\r")
+            sys.stdout.write(get_table())
+            sys.stdout.flush()
+        else:
+            forks[index] = change
