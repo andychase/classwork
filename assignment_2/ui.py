@@ -1,9 +1,10 @@
 import sys
+import os
 
 
-use_ascii = True
+use_emoji = os.environ.get("use_emoji", "False") == "True"
 
-if use_ascii:
+if not use_emoji:
     face = " =]"
     thinking = "THK"
     eating = "EAT"
