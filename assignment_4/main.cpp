@@ -1,33 +1,67 @@
-/* Copied from: http://web.engr.oregonstate.edu/~mjb/cs575/Projects/proj03.html */
+/* Copied from: http://web.engr.oregonstate.edu/~mjb/cs575/Projects/proj04.html */
 #include <omp.h>
-#include <stdio.h>
+#include <math.h>
+#include "globals.h"
+#include "agents.h"
+#include "randf.h"
 
-#define NUMT    4
+struct GrainState grainState = {
+        .NowMonth = 0,
+        .NowYear = 2016,
 
-struct {
-    float value;
-    int pad[17];
-} Array[NUMT];
+        .NowNumDeer = 1,
+        .NowHeight = 1.f
+};
 
+
+void CalcTempAndPrecip(struct GrainState *grainState) {
+    float ang = (float) ((30. * (float) grainState->NowMonth + 15.) * (M_PI / 180.f));
+
+    float temp = AVG_TEMP - AMP_TEMP * cos(ang);
+    grainState->NowTemp = temp + Ranf(-RANDOM_TEMP, RANDOM_TEMP);
+
+    float precip = AVG_PRECIP_PER_MONTH + AMP_PRECIP_PER_MONTH * sin(ang);
+    grainState->NowPrecip = precip + Ranf(-RANDOM_PRECIP, RANDOM_PRECIP);
+    if (grainState->NowPrecip < 0.)
+        grainState->NowPrecip = 0.f;
+}
 
 int main(int argc, char *argv[]) {
     omp_set_num_threads(NUMT);
 
-    long unsigned int numberOfComputations = 10E8;    // if > 4B, use "long unsigned int"
+    // starting date and time:
+
 
     double start_time = omp_get_wtime();
-#pragma omp parallel for
-        for (int i = 0; i < NUMT; i++) {
-            float tmp = Array[i].value;
-            for (unsigned int j = 0; j < numberOfComputations; j++) {
-                tmp += 2;
+    CalcTempAndPrecip(&grainState);
+
+#pragma omp parallel sections
+    {
+#pragma omp section
+        {
+            GrainDeer(&grainState);
+        }
+
+#pragma omp section
+        {
+            Grain(&grainState);
+        }
+
+#pragma omp section
+        {
+            Watcher(&grainState);
+        }
+
+#pragma omp section
+        {
+            Disease(&grainState);
         }
     }
+
 
     double end_time = omp_get_wtime();
     double time_total = end_time - start_time;
 
-    double MegaCompuationsPerSec = (numberOfComputations) / (time_total) / 4 / 1000000;
-    printf("%.2lf\n", MegaCompuationsPerSec);
-
+//    double MegaCompuationsPerSec = (numberOfComputations) / (time_total) / 4 / 1000000;
+//    printf("%.2lf\n", MegaCompuationsPerSec);
 }
