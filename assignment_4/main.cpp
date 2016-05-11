@@ -40,7 +40,7 @@ int main(int argc, char *argv[]) {
 
 #pragma omp section
         {
-            Disease(&grainState);
+            HotDays(&grainState);
         }
     }
 

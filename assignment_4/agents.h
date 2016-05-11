@@ -8,7 +8,7 @@
 void GrainDeer(GrainState *grainState);
 void Grain(GrainState *grainState);
 void Watcher(GrainState *grainState);
-void Disease(GrainState *grainState);
+void HotDays(GrainState *grainState);
 GrainState CalcTempAndPrecip(struct GrainState *grainState);
 
 #endif //ASSIGNMENT_4_AGENTS_H

@@ -58,6 +58,9 @@ void Grain(GrainState *grainState) {
         // You then use tempFactor and precipFactor like this:
         nextHeight += tempFactor * precipFactor * GRAIN_GROWS_PER_MONTH;
         nextHeight -= (float) grainState->numDeer * ONE_DEER_EATS_PER_MONTH;
+        // The grain was too hot for 3
+        if (grainState->hotDays > HOT_DAYS)
+            nextHeight = 0;
         //Be sure to clamp NowHeight against zero.
         nextHeight = max(nextHeight, 0.0f);
 
@@ -84,6 +87,7 @@ void Watcher(GrainState *grainState) {
     "Precip" << "," <<
     "Temp" << "," <<
     "Height" << "," <<
+    "HotDays" << "," <<
     "NumDeer" << "\n";
 
     while (grainState->year <= 2021) {
@@ -97,12 +101,13 @@ void Watcher(GrainState *grainState) {
         // DoneAssigning barrier:
 #pragma omp barrier
         std::cout <<
-        nextState.year << "," <<
-        nextState.month << "," <<
-        nextState.precip << "," <<
-        nextState.temp << "," <<
-        nextState.height << "," <<
-        nextState.numDeer << "\n";
+        grainState->year << "," <<
+        grainState->month << "," <<
+        grainState->precip << "," <<
+        grainState->temp << "," <<
+        grainState->height << "," <<
+        grainState->hotDays << "," <<
+        grainState->numDeer << "\n";
 
         grainState->temp = nextState.temp;
         grainState->precip = nextState.precip;
@@ -115,14 +120,18 @@ void Watcher(GrainState *grainState) {
     }
 }
 
-void Disease(GrainState *grainState) {
+void HotDays(GrainState *grainState) {
     while (grainState->year <= 2021) {
         // compute a temporary next-value for this quantity based on the current state of the simulation:
-        ;
+        int hotDays = grainState->hotDays;
+        if (grainState->temp > HOT_DAYS_TEMP)
+            hotDays += 1;
+        else
+            hotDays = 0;
 
         // DoneComputing barrier:
 #pragma omp barrier
-        ;
+        grainState->hotDays = hotDays;
 
         // DoneAssigning barrier:
 #pragma omp barrier

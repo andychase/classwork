@@ -16,6 +16,7 @@ struct GrainState {
     float temp; // temperature this month
     float height; // grain height in inches
     int numDeer; // number of deer in the current population
+    int hotDays; // number of deer in the current population
 };
 
 // Constants
@@ -30,6 +31,12 @@ struct GrainState {
 #define AVG_TEMP                50.0f
 #define AMP_TEMP                20.0f
 #define RANDOM_TEMP            10.0f
+
+
+// How hot grain can get before starting to go bad
+#define HOT_DAYS_TEMP           75
+// Number of days grain can stay hot without going bad
+#define HOT_DAYS                3
 
 // https://dustri.org/b/min-and-max-macro-considered-harmful.html
 inline float max(float a, float b) {
