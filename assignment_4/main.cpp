@@ -1,30 +1,16 @@
 /* Copied from: http://web.engr.oregonstate.edu/~mjb/cs575/Projects/proj04.html */
 #include <omp.h>
-#include <math.h>
 #include "globals.h"
 #include "agents.h"
-#include "randf.h"
 
 struct GrainState grainState = {
-        .NowMonth = 0,
-        .NowYear = 2016,
+        .month = 0,
+        .year = 2016,
 
-        .NowNumDeer = 1,
-        .NowHeight = 1.f
+        .numDeer = 1,
+        .height = 1.f
 };
 
-
-void CalcTempAndPrecip(struct GrainState *grainState) {
-    float ang = (float) ((30. * (float) grainState->NowMonth + 15.) * (M_PI / 180.f));
-
-    float temp = AVG_TEMP - AMP_TEMP * cos(ang);
-    grainState->NowTemp = temp + Ranf(-RANDOM_TEMP, RANDOM_TEMP);
-
-    float precip = AVG_PRECIP_PER_MONTH + AMP_PRECIP_PER_MONTH * sin(ang);
-    grainState->NowPrecip = precip + Ranf(-RANDOM_PRECIP, RANDOM_PRECIP);
-    if (grainState->NowPrecip < 0.)
-        grainState->NowPrecip = 0.f;
-}
 
 int main(int argc, char *argv[]) {
     omp_set_num_threads(NUMT);

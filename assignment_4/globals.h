@@ -6,16 +6,16 @@
 #define ASSIGNMENT_4_GLOBALS_H
 
 // Number of threads
-#define NUMT    1
+#define NUMT    4
 
 struct GrainState {
-    int NowYear; // 2016 - 2021
-    int NowMonth; // 0 - 11
+    int year; // 2016 - 2021
+    int month; // 0 - 11
 
-    float NowPrecip; // inches of rain per month
-    float NowTemp; // temperature this month
-    float NowHeight; // grain height in inches
-    int NowNumDeer; // number of deer in the current population
+    float precip; // inches of rain per month
+    float temp; // temperature this month
+    float height; // grain height in inches
+    int numDeer; // number of deer in the current population
 };
 
 // Constants

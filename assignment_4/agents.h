@@ -7,7 +7,8 @@
 
 void GrainDeer(GrainState *grainState);
 void Grain(GrainState *grainState);
-void Watcher(GrainState *pState);
-void Disease(GrainState *pState);
+void Watcher(GrainState *grainState);
+void Disease(GrainState *grainState);
+GrainState CalcTempAndPrecip(struct GrainState *grainState);
 
 #endif //ASSIGNMENT_4_AGENTS_H
