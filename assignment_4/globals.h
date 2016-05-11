@@ -31,4 +31,11 @@ struct GrainState {
 #define AMP_TEMP                20.0f
 #define RANDOM_TEMP            10.0f
 
+// https://dustri.org/b/min-and-max-macro-considered-harmful.html
+inline float max(float a, float b) {
+    if (a < b)
+        return b;
+    return a;
+}
+
 #endif //ASSIGNMENT_4_GLOBALS_H
