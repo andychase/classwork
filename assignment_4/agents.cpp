@@ -78,6 +78,14 @@ void Grain(GrainState *grainState) {
 
 void Watcher(GrainState *grainState) {
     struct GrainState nextState;
+    std::cout <<
+    "Year" << "," <<
+    "Month" << "," <<
+    "Precip" << "," <<
+    "Temp" << "," <<
+    "Height" << "," <<
+    "NumDeer" << "\n";
+
     while (grainState->year <= 2021) {
         // compute a temporary next-value for this quantity based on the current state of the simulation:
         nextState = CalcTempAndPrecip(grainState);
@@ -89,12 +97,13 @@ void Watcher(GrainState *grainState) {
         // DoneAssigning barrier:
 #pragma omp barrier
         std::cout <<
-        "Year: " << nextState.year << "\n" <<
-        "Month:" << nextState.month << "\n" <<
-        "Precip: " << nextState.precip << "\n" <<
-        "Temp: " << nextState.temp << "\n" <<
-        "Height: " << nextState.height << "\n" <<
-        "NumDeer: " << nextState.numDeer << "\n\n";
+        nextState.year << "," <<
+        nextState.month << "," <<
+        nextState.precip << "," <<
+        nextState.temp << "," <<
+        nextState.height << "," <<
+        nextState.numDeer << "\n";
+
         grainState->temp = nextState.temp;
         grainState->precip = nextState.precip;
         grainState->month = nextState.month;
