@@ -6,7 +6,6 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 
-#include <omp.h>
 
 #ifndef SIMD_H
 #define SIMD_H

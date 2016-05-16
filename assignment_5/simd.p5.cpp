@@ -1,5 +1,7 @@
 #include "simd.p5.h"
 
+
+
 void Mul(float *a, float *b, float *c, int len) {
     for (int i = 0; i < len; i++) {
         c[i] = a[i] * b[i];
