@@ -1,53 +1,32 @@
-/* Copied from: http://web.engr.oregonstate.edu/~mjb/cs575/Projects/proj04.html */
+/* Copied from: http://web.engr.oregonstate.edu/~mjb/cs575/Projects/proj05.html */
 #include <omp.h>
-#include "globals.h"
-#include "agents.h"
+#include <cstdio>
+#include "simd.p5.h"
 
-struct GrainState grainState = {
-        .month = 0,
-        .year = 2016,
+#define NUMT 1
+#define LENGTH 1000
+#define LOOP 500
 
-        .numDeer = 1,
-        .height = 1.f
-};
-
+float vars[3][LENGTH];
 
 int main(int argc, char *argv[]) {
-    omp_set_num_threads(NUMT);
+    // Setup
+    double time_total = 0;
+    double start_time = 0;
+    double end_time = 0;
+    for(int x = 0; x < LOOP; x++) {
+        for (int j = 0; j < 3; j++)
+            for (int i = 0; i < LENGTH; i++)
+                vars[j][i] = 4.f;
 
-    // starting date and time:
+        start_time = omp_get_wtime();
 
+        Mul(vars[0], vars[1], vars[2], 3);
 
-    double start_time = omp_get_wtime();
-    CalcTempAndPrecip(&grainState);
-
-#pragma omp parallel sections
-    {
-#pragma omp section
-        {
-            GrainDeer(&grainState);
-        }
-
-#pragma omp section
-        {
-            Grain(&grainState);
-        }
-
-#pragma omp section
-        {
-            Watcher(&grainState);
-        }
-
-#pragma omp section
-        {
-            HotDays(&grainState);
-        }
+        end_time = omp_get_wtime();
+        time_total += end_time - start_time;
     }
 
-
-    double end_time = omp_get_wtime();
-    double time_total = end_time - start_time;
-
-//    double MegaCompuationsPerSec = (numberOfComputations) / (time_total) / 4 / 1000000;
-//    printf("%.2lf\n", MegaCompuationsPerSec);
+    double MegaCompuationsPerSec = LENGTH / (time_total / LOOP) / 1000000;
+    printf("%.2lf\n", MegaCompuationsPerSec);
 }

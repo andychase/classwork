@@ -17,7 +17,7 @@
 
 #define ALIGNED		__attribute__((aligned(16)))
 
-
+void    Mul(        float *, float *,  float *, int );
 void	SimdMul(    float *, float *,  float *, int );
 float	SimdMulSum( float *, float *, int );
 
