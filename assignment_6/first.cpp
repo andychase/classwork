@@ -1,3 +1,7 @@
+// References: http://web.engr.oregonstate.edu/~mjb/cs575/Handouts/opencl.reduction.2pp.pdf
+// http://web.engr.oregonstate.edu/~mjb/cs575/Projects/proj06.html
+
+
 // 1. Program header
 
 #include <stdio.h>
@@ -22,7 +26,7 @@ int calc();
 int
 main(int argc, char *argv[]) {
     fprintf(stderr, "LOCAL_SIZE\tGLOBAL_SIZE\t GigaMultsPerSecond\n");
-    for (; GLOBAL_SIZE < 64 * 1024 * 1000; GLOBAL_SIZE *= 10) {
+    for (; GLOBAL_SIZE < 64 * 1024 * 10000; GLOBAL_SIZE *= 10) {
         for (LOCAL_SIZE = 8; LOCAL_SIZE < 64 * 2 * 2 * 2; LOCAL_SIZE *= 2) {
             calc();
         }
@@ -64,11 +68,12 @@ calc() {
     float *hA = new float[GLOBAL_SIZE];
     float *hB = new float[GLOBAL_SIZE];
     float *hC = new float[GLOBAL_SIZE];
+    float *hD = new float[GLOBAL_SIZE];
 
     // fill the host memory buffers:
 
     for (int i = 0; i < GLOBAL_SIZE; i++) {
-        hA[i] = hB[i] = (float) sqrt((double) i);
+        hA[i] = hB[i] = hC[i] = (float) sqrt((double) i);
     }
 
     size_t dataSize = GLOBAL_SIZE * sizeof(float);
@@ -95,9 +100,13 @@ calc() {
     if (status != CL_SUCCESS)
         fprintf(stderr, "clCreateBuffer failed (2)\n");
 
-    cl_mem dC = clCreateBuffer(context, CL_MEM_WRITE_ONLY, dataSize, NULL, &status);
+    cl_mem dC = clCreateBuffer(context, CL_MEM_READ_ONLY, dataSize, NULL, &status);
     if (status != CL_SUCCESS)
         fprintf(stderr, "clCreateBuffer failed (3)\n");
+
+    cl_mem dD = clCreateBuffer(context, CL_MEM_WRITE_ONLY, dataSize, NULL, &status);
+    if (status != CL_SUCCESS)
+        fprintf(stderr, "clCreateBuffer failed (4)\n");
 
     // 6. enqueue the 2 commands to write the data from the host buffers to the device buffers:
 
@@ -108,6 +117,14 @@ calc() {
     status = clEnqueueWriteBuffer(cmdQueue, dB, CL_FALSE, 0, dataSize, hB, 0, NULL, NULL);
     if (status != CL_SUCCESS)
         fprintf(stderr, "clEnqueueWriteBuffer failed (2)\n");
+
+    status = clEnqueueWriteBuffer(cmdQueue, dC, CL_FALSE, 0, dataSize, hC, 0, NULL, NULL);
+    if (status != CL_SUCCESS)
+        fprintf(stderr, "clEnqueueWriteBuffer failed (3)\n");
+
+    status = clEnqueueWriteBuffer(cmdQueue, dD, CL_FALSE, 0, dataSize, hD, 0, NULL, NULL);
+    if (status != CL_SUCCESS)
+        fprintf(stderr, "clEnqueueWriteBuffer failed (4)\n");
 
     Wait(cmdQueue);
 
@@ -161,9 +178,13 @@ calc() {
     if (status != CL_SUCCESS)
         fprintf(stderr, "clSetKernelArg failed (2)\n");
 
-    status = clSetKernelArg(kernel, 2, sizeof(cl_mem), &dC);
+    status = clSetKernelArg(kernel, 2, sizeof(float), NULL);
     if (status != CL_SUCCESS)
         fprintf(stderr, "clSetKernelArg failed (3)\n");
+
+    status = clSetKernelArg(kernel, 3, sizeof(cl_mem), &dD);
+    if (status != CL_SUCCESS)
+        fprintf(stderr, "clSetKernelArg failed (4)\n");
 
 
     // 11. enqueue the kernel object for execution:
@@ -172,8 +193,8 @@ calc() {
         hA[i] = hB[i] = (float) sqrt((double) i);
     }
 
-    size_t globalWorkSize[3] = {GLOBAL_SIZE, 1, 1};
-    size_t localWorkSize[3] = {LOCAL_SIZE, 1, 1};
+    size_t globalWorkSize[4] = {GLOBAL_SIZE, 1, 1, 1};
+    size_t localWorkSize[4] = {LOCAL_SIZE, 1, 1, 1};
 
     Wait(cmdQueue);
     double time0 = omp_get_wtime();
@@ -187,13 +208,17 @@ calc() {
 
     // 12. read the results buffer back from the device to the host:
 
-    status = clEnqueueReadBuffer(cmdQueue, dC, CL_TRUE, 0, dataSize, hC, 0, NULL, NULL);
+    status = clEnqueueReadBuffer(cmdQueue, dD, CL_TRUE, 0, dataSize, hD, 0, NULL, NULL);
     if (status != CL_SUCCESS)
         fprintf(stderr, "clEnqueueReadBuffer failed\n");
 
+    long double hD_sum = 0;
+    for(int jj = 0; jj < GLOBAL_SIZE / LOCAL_SIZE; jj++)
+        hD_sum += hD[jj];
 
-    fprintf(stderr, "%lu,%lu,%10.3lf\n",
-            LOCAL_SIZE, GLOBAL_SIZE, (double) GLOBAL_SIZE / (time1 - time0) / 1000000000.);
+
+    fprintf(stderr, "%lu,%lu,%Lf,%10.3lf\n",
+            LOCAL_SIZE, GLOBAL_SIZE, hD_sum, (double) GLOBAL_SIZE / (time1 - time0) / 1000000000.);
 
     // 13. clean everything up:
 
@@ -207,6 +232,7 @@ calc() {
     delete[] hA;
     delete[] hB;
     delete[] hC;
+    delete[] hD;
 
     return 0;
 }
