@@ -15,7 +15,7 @@
 
 size_t GLOBAL_SIZE = 64 * 1024;
 
-size_t LOCAL_SIZE = 8;
+size_t LOCAL_SIZE = 32;
 
 const char *CL_FILE_NAME = {"first.cl"};
 
@@ -26,10 +26,9 @@ int calc();
 int
 main(int argc, char *argv[]) {
     fprintf(stderr, "LOCAL_SIZE\tGLOBAL_SIZE\t GigaMultsPerSecond\n");
-    for (; GLOBAL_SIZE < 64 * 1024 * 10000; GLOBAL_SIZE *= 10) {
-        for (LOCAL_SIZE = 8; LOCAL_SIZE < 64 * 2 * 2 * 2; LOCAL_SIZE *= 2) {
+    for (; GLOBAL_SIZE < 64 * 1024 * 10000; GLOBAL_SIZE *= 2) {
+
             calc();
-        }
     }
 }
 
