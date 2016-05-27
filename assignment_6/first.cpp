@@ -2,59 +2,44 @@
 
 #include <stdio.h>
 #include <math.h>
-#include <string.h>
 #include <stdlib.h>
-
-#ifdef WIN32
-#include <windows.h>
-#else
-
-#include <unistd.h>
-
-#endif
 
 #include <omp.h>
 
 #include "OpenCL/cl.h"
-#include "OpenCL/cl_platform.h"
 
 
-#ifndef NMB
-#define    NMB            64
-#endif
+size_t GLOBAL_SIZE = 64 * 1024;
 
-#define NUM_ELEMENTS        NMB*1024*1024
-
-#ifndef LOCAL_SIZE
-#define    LOCAL_SIZE        64
-#endif
-
-#define    NUM_WORK_GROUPS        NUM_ELEMENTS/LOCAL_SIZE
+size_t LOCAL_SIZE = 8;
 
 const char *CL_FILE_NAME = {"first.cl"};
-const float TOL = 0.0001f;
 
 void Wait(cl_command_queue);
 
-int LookAtTheBits(float);
-
+int calc();
 
 int
 main(int argc, char *argv[]) {
+    fprintf(stderr, "LOCAL_SIZE\tGLOBAL_SIZE\t GigaMultsPerSecond\n");
+    for (; GLOBAL_SIZE < 64 * 1024 * 10000; GLOBAL_SIZE *= 10) {
+        for (LOCAL_SIZE = 8; LOCAL_SIZE < 64 * 2 * 2 * 2; LOCAL_SIZE *= 2) {
+            calc();
+        }
+    }
+}
+
+int
+calc() {
+
     // see if we can even open the opencl kernel program
     // (no point going on if we can't):
 
     FILE *fp;
-#ifdef WIN32
-    errno_t err = fopen_s( &fp, CL_FILE_NAME, "r" );
-    if( err != 0 )
-#else
+
     fp = fopen(CL_FILE_NAME, "r");
-    if (fp == NULL)
-#endif
-    {
+    if (fp == NULL) {
         fprintf(stderr, "Cannot open OpenCL source file '%s'\n", CL_FILE_NAME);
-        return 1;
     }
 
     cl_int status;        // returned status from opencl calls
@@ -76,17 +61,18 @@ main(int argc, char *argv[]) {
 
     // 2. allocate the host memory buffers:
 
-    float *hA = new float[NUM_ELEMENTS];
-    float *hB = new float[NUM_ELEMENTS];
-    float *hC = new float[NUM_ELEMENTS];
+    float *hA = new float[GLOBAL_SIZE];
+    float *hB = new float[GLOBAL_SIZE];
+    float *hC = new float[GLOBAL_SIZE];
+    float *hD = new float[GLOBAL_SIZE];
 
     // fill the host memory buffers:
 
-    for (int i = 0; i < NUM_ELEMENTS; i++) {
-        hA[i] = hB[i] = (float) sqrt((double) i);
+    for (int i = 0; i < GLOBAL_SIZE; i++) {
+        hA[i] = hB[i] = hC[i] = (float) sqrt((double) i);
     }
 
-    size_t dataSize = NUM_ELEMENTS * sizeof(float);
+    size_t dataSize = GLOBAL_SIZE * sizeof(float);
 
     // 3. create an opencl context:
 
@@ -110,9 +96,13 @@ main(int argc, char *argv[]) {
     if (status != CL_SUCCESS)
         fprintf(stderr, "clCreateBuffer failed (2)\n");
 
-    cl_mem dC = clCreateBuffer(context, CL_MEM_WRITE_ONLY, dataSize, NULL, &status);
+    cl_mem dC = clCreateBuffer(context, CL_MEM_READ_ONLY, dataSize, NULL, &status);
     if (status != CL_SUCCESS)
         fprintf(stderr, "clCreateBuffer failed (3)\n");
+
+    cl_mem dD = clCreateBuffer(context, CL_MEM_WRITE_ONLY, dataSize, NULL, &status);
+    if (status != CL_SUCCESS)
+        fprintf(stderr, "clCreateBuffer failed (4)\n");
 
     // 6. enqueue the 2 commands to write the data from the host buffers to the device buffers:
 
@@ -124,19 +114,27 @@ main(int argc, char *argv[]) {
     if (status != CL_SUCCESS)
         fprintf(stderr, "clEnqueueWriteBuffer failed (2)\n");
 
+    status = clEnqueueWriteBuffer(cmdQueue, dC, CL_FALSE, 0, dataSize, hC, 0, NULL, NULL);
+    if (status != CL_SUCCESS)
+        fprintf(stderr, "clEnqueueWriteBuffer failed (3)\n");
+
+    status = clEnqueueWriteBuffer(cmdQueue, dD, CL_FALSE, 0, dataSize, hD, 0, NULL, NULL);
+    if (status != CL_SUCCESS)
+        fprintf(stderr, "clEnqueueWriteBuffer failed (4)\n");
+
     Wait(cmdQueue);
 
     // 7. read the kernel code from a file:
 
     fseek(fp, 0, SEEK_END);
-    size_t fileSize = ftell(fp);
+    size_t fileSize = (size_t) ftell(fp);
     fseek(fp, 0, SEEK_SET);
     char *clProgramText = new char[fileSize + 1];        // leave room for '\0'
     size_t n = fread(clProgramText, 1, fileSize, fp);
     clProgramText[fileSize] = '\0';
     fclose(fp);
     if (n != fileSize)
-        fprintf(stderr, "Expected to read %d bytes read from '%s' -- actually read %d.\n", fileSize, CL_FILE_NAME, n);
+        fprintf(stderr, "Expected to read %lu bytes read from '%s' -- actually read %lu.\n", fileSize, CL_FILE_NAME, n);
 
     // create the text for the kernel program:
 
@@ -149,14 +147,14 @@ main(int argc, char *argv[]) {
 
     // 8. compile and link the kernel code:
 
-    char *options = {""};
+    char *options = {(char *) ""};
     status = clBuildProgram(program, 1, &device, options, NULL, NULL);
     if (status != CL_SUCCESS) {
         size_t size;
         clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, 0, NULL, &size);
         cl_char *log = new cl_char[size];
         clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, size, log, NULL);
-        fprintf(stderr, "clBuildProgram failed:\n%s\n", log);
+        fprintf(stderr, "clBuildProgram failed:\n%p\n", log);
         delete[] log;
     }
 
@@ -180,16 +178,22 @@ main(int argc, char *argv[]) {
     if (status != CL_SUCCESS)
         fprintf(stderr, "clSetKernelArg failed (3)\n");
 
+    status = clSetKernelArg(kernel, 3, sizeof(cl_mem), &dD);
+    if (status != CL_SUCCESS)
+        fprintf(stderr, "clSetKernelArg failed (4)\n");
+
 
     // 11. enqueue the kernel object for execution:
 
-    size_t globalWorkSize[3] = {NUM_ELEMENTS, 1, 1};
-    size_t localWorkSize[3] = {LOCAL_SIZE, 1, 1};
+    for (int i = 0; i < GLOBAL_SIZE; i++) {
+        hA[i] = hB[i] = (float) sqrt((double) i);
+    }
+
+    size_t globalWorkSize[4] = {GLOBAL_SIZE, 1, 1, 1};
+    size_t localWorkSize[4] = {LOCAL_SIZE, 1, 1, 1};
 
     Wait(cmdQueue);
     double time0 = omp_get_wtime();
-
-    time0 = omp_get_wtime();
 
     status = clEnqueueNDRangeKernel(cmdQueue, kernel, 1, NULL, globalWorkSize, localWorkSize, 0, NULL, NULL);
     if (status != CL_SUCCESS)
@@ -200,29 +204,13 @@ main(int argc, char *argv[]) {
 
     // 12. read the results buffer back from the device to the host:
 
-    status = clEnqueueReadBuffer(cmdQueue, dC, CL_TRUE, 0, dataSize, hC, 0, NULL, NULL);
+    status = clEnqueueReadBuffer(cmdQueue, dD, CL_TRUE, 0, dataSize, hD, 0, NULL, NULL);
     if (status != CL_SUCCESS)
         fprintf(stderr, "clEnqueueReadBuffer failed\n");
 
-    // did it work?
 
-    for (int i = 0; i < NUM_ELEMENTS; i++) {
-        float expected = hA[i] * hB[i];
-        if (fabs(hC[i] - expected) > TOL) {
-            //fprintf( stderr, "%4d: %13.6f * %13.6f wrongly produced %13.6f instead of %13.6f (%13.8f)\n",
-            //i, hA[i], hB[i], hC[i], expected, fabs(hC[i]-expected) );
-            //fprintf( stderr, "%4d:    0x%08x *    0x%08x wrongly produced    0x%08x instead of    0x%08x\n",
-            //i, LookAtTheBits(hA[i]), LookAtTheBits(hB[i]), LookAtTheBits(hC[i]), LookAtTheBits(expected) );
-        }
-    }
-
-    fprintf(stderr, "%8d\t%4d\t%10d\t%10.3lf GigaMultsPerSecond\n",
-            NMB, LOCAL_SIZE, NUM_WORK_GROUPS, (double) NUM_ELEMENTS / (time1 - time0) / 1000000000.);
-
-#ifdef WIN32
-    Sleep( 2000 );
-#endif
-
+    fprintf(stderr, "%lu,%lu,%10.3lf\n",
+            LOCAL_SIZE, GLOBAL_SIZE, (double) GLOBAL_SIZE / (time1 - time0) / 1000000000.);
 
     // 13. clean everything up:
 
@@ -236,15 +224,9 @@ main(int argc, char *argv[]) {
     delete[] hA;
     delete[] hB;
     delete[] hC;
+    delete[] hD;
 
     return 0;
-}
-
-
-int
-LookAtTheBits(float fp) {
-    int *ip = (int *) &fp;
-    return *ip;
 }
 
 
