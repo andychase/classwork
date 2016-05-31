@@ -1,13 +1,7 @@
 #include <stdio.h>
-#include <math.h>
 #include <string.h>
 #include <stdlib.h>
-#include <ctype.h>
 #include <omp.h>
-
-#define _USE_MATH_DEFINES
-
-#include <math.h>
 
 #include "OpenCL/cl.h"
 #include "OpenCL/cl_gl.h"
@@ -27,15 +21,15 @@ const char *GLUITITLE = {"User Interface Window"};
 
 // random parameters:					
 
-const float XMIN = {-100.0};
+const float XMIN = {-100.0f};
 const float XMAX = {100.0};
-const float YMIN = {-100.0};
+const float YMIN = {-100.0f};
 const float YMAX = {100.0};
-const float ZMIN = {-100.0};
+const float ZMIN = {-100.0f};
 const float ZMAX = {100.0};
 
-const float VMIN = {-100.};
-const float VMAX = {100.};
+const float VMIN = {-100.f};
+const float VMAX = {100.f};
 
 
 const int NUM_PARTICLES = 1024 * 1024;
@@ -44,14 +38,13 @@ const char *CL_FILE_NAME = {"particles.cl"};
 const char *CL_BINARY_NAME = {"particles.nv"};
 
 
-const int GLUITRUE = {true};
 const int GLUIFALSE = {false};
 
 #define ESCAPE        0x1b
 
 const int INIT_WINDOW_SIZE = {700};        // window size in pixels
 
-const float ANGFACT = {1.};
+const float ANGFACT = {1.f};
 const float SCLFACT = {0.005f};
 const float MINSCALE = {0.001f};
 
@@ -71,10 +64,10 @@ enum ButtonVals {
     QUIT
 };
 
-const float BACKCOLOR[] = {0., 0., 0., 0.};
+const float BACKCOLOR[] = {0.f, 0.f, 0.f, 0.f};
 
-const GLfloat AXES_COLOR[] = {1., .5, 0.};
-const GLfloat AXES_WIDTH = {3.};
+const GLfloat AXES_COLOR[] = {1.f, .5, 0.f};
+const GLfloat AXES_WIDTH = {3.f};
 
 //
 // structs we will need later:
@@ -94,7 +87,6 @@ int ActiveButton;        // current button that is down
 GLuint AxesList;        // list to hold the axes
 int AxesOn;            // ON or OFF
 GLUI *Glui;            // instance of glui window
-int GluiWindow;        // the glut id for the glui window
 int MainWindow;        // window id for main graphics window
 int Paused;
 GLfloat RotMatrix[4][4];    // set by glui rotation widget
@@ -122,22 +114,6 @@ cl_device_id Device;
 cl_kernel Kernel;
 cl_platform_id Platform;
 cl_program Program;
-cl_platform_id PlatformID;
-
-
-
-
-
-
-//
-// function prototypes:
-//
-
-inline
-float
-SQR(float x) {
-    return x * x;
-}
 
 void Animate();
 
@@ -148,8 +124,6 @@ void Buttons(int);
 void Display();
 
 void DoRasterString(float, float, float, char *);
-
-void DoStrokeString(float, float, float, float, char *);
 
 void InitCL();
 
@@ -177,16 +151,9 @@ void Reset();
 
 void ResetParticles();
 
-void Resize(int, int);
-
-void Traces(int);
+void Resize(int __unused, int);
 
 void Visibility(int);
-
-
-//
-// main Program:
-//
 
 int
 main(int argc, char *argv[]) {
@@ -203,7 +170,7 @@ main(int argc, char *argv[]) {
 void
 Animate() {
     cl_int status;
-    double time0, time1;
+    double time0 = 0, time1 = 0;
 
     // acquire the vertex buffers from opengl:
 
@@ -211,9 +178,9 @@ Animate() {
     glFinish();
 
     status = clEnqueueAcquireGLObjects(CmdQueue, 1, &dPobj, 0, NULL, NULL);
-    PrintCLError(status, "clEnqueueAcquireGLObjects (1): ");
+    PrintCLError(status, (char *) "clEnqueueAcquireGLObjects (1): ");
     status = clEnqueueAcquireGLObjects(CmdQueue, 1, &dCobj, 0, NULL, NULL);
-    PrintCLError(status, "clEnqueueAcquireGLObjects (2): ");
+    PrintCLError(status, (char *) "clEnqueueAcquireGLObjects (2): ");
 
     if (ShowPerformance)
         time0 = omp_get_wtime();
@@ -222,20 +189,20 @@ Animate() {
 
     cl_event wait;
     status = clEnqueueNDRangeKernel(CmdQueue, Kernel, 1, NULL, GlobalWorkSize, LocalWorkSize, 0, NULL, &wait);
-    PrintCLError(status, "clEnqueueNDRangeKernel: ");
+    PrintCLError(status, (char *) "clEnqueueNDRangeKernel: ");
 
     if (ShowPerformance) {
         status = clWaitForEvents(1, &wait);
-        PrintCLError(status, "clWaitForEvents: ");
+        PrintCLError(status, (char *) "clWaitForEvents: ");
         time1 = omp_get_wtime();
         ElapsedTime = time1 - time0;
     }
 
     clFinish(CmdQueue);
     status = clEnqueueReleaseGLObjects(CmdQueue, 1, &dCobj, 0, NULL, NULL);
-    PrintCLError(status, "clEnqueueReleaseGLObjects (2): ");
+    PrintCLError(status, (char *) "clEnqueueReleaseGLObjects (2): ");
     status = clEnqueueReleaseGLObjects(CmdQueue, 1, &dPobj, 0, NULL, NULL);
-    PrintCLError(status, "clEnqueueReleaseGLObjects (2): ");
+    PrintCLError(status, (char *) "clEnqueueReleaseGLObjects (2): ");
 
     glutSetWindow(MainWindow);
     glutPostRedisplay();
@@ -269,7 +236,7 @@ Buttons(int id) {
             ResetParticles();
             status = clEnqueueWriteBuffer(CmdQueue, dVel, CL_FALSE, 0, 4 * sizeof(float) * NUM_PARTICLES, hVel, 0, NULL,
                                           NULL);
-            PrintCLError(status, "clEneueueWriteBuffer: ");
+            PrintCLError(status, (char *) "clEneueueWriteBuffer: ");
             GLUI_Master.set_glutIdleFunc(NULL);
             Glui->sync_live();
             glutSetWindow(MainWindow);
@@ -318,18 +285,18 @@ Display() {
     glLoadIdentity();
     gluLookAt(0., -100., 800., 0., -100., 0., 0., 1., 0.);
     glTranslatef((GLfloat) TransXYZ[0], (GLfloat) TransXYZ[1], -(GLfloat) TransXYZ[2]);
-    glRotatef((GLfloat) Yrot, 0., 1., 0.);
-    glRotatef((GLfloat) Xrot, 1., 0., 0.);
+    glRotatef((GLfloat) Yrot, 0.f, 1.f, 0.f);
+    glRotatef((GLfloat) Xrot, 1.f, 0.f, 0.f);
     glMultMatrixf((const GLfloat *) RotMatrix);
     glScalef((GLfloat) Scale, (GLfloat) Scale, (GLfloat) Scale);
-    float scale2 = 1. + Scale2;        // because glui translation starts at 0.
+    float scale2 = 1.f + Scale2;        // because glui translation starts at 0.
     if (scale2 < MINSCALE)
         scale2 = MINSCALE;
     glScalef((GLfloat) scale2, (GLfloat) scale2, (GLfloat) scale2);
 
     glDisable(GL_FOG);
 
-    if (AxesOn != GLUIFALSE)
+    if (AxesOn != 0)
         glCallList(AxesList);
 
     // ****************************************
@@ -344,9 +311,9 @@ Display() {
     glColorPointer(4, GL_FLOAT, 0, (void *) 0);
     glEnableClientState(GL_COLOR_ARRAY);
 
-    glPointSize(3.);
+    glPointSize(3.f);
     glDrawArrays(GL_POINTS, 0, NUM_PARTICLES);
-    glPointSize(1.);
+    glPointSize(1.f);
 
     glDisableClientState(GL_VERTEX_ARRAY);
     glDisableClientState(GL_COLOR_ARRAY);
@@ -363,8 +330,8 @@ Display() {
         gluOrtho2D(0., 100., 0., 100.);
         glMatrixMode(GL_MODELVIEW);
         glLoadIdentity();
-        glColor3f(1., 1., 1.);
-        DoRasterString(5., 95., 0., str);
+        glColor3f(1.f, 1.f, 1.f);
+        DoRasterString(5.f, 95.f, 0.f, str);
     }
 
     glutSwapBuffers();
@@ -390,25 +357,6 @@ DoRasterString(float x, float y, float z, char *s) {
 
 
 //
-// use glut to display a string of characters using a stroke font:
-//
-
-void
-DoStrokeString(float x, float y, float z, float ht, char *s) {
-    char c;            // one character to print
-
-    glPushMatrix();
-    glTranslatef((GLfloat) x, (GLfloat) y, (GLfloat) z);
-    float sf = ht / (119.05 + 33.33);
-    glScalef((GLfloat) sf, (GLfloat) sf, (GLfloat) sf);
-    for (; (c = *s) != '\0'; s++) {
-        glutStrokeCharacter(GLUT_STROKE_ROMAN, c);
-    }
-    glPopMatrix();
-}
-
-
-//
 // initialize the opencl stuff:
 //
 
@@ -431,12 +379,12 @@ InitCL() {
     // get the platform id:
 
     status = clGetPlatformIDs(1, &Platform, NULL);
-    PrintCLError(status, "clGetPlatformIDs: ");
+    PrintCLError(status, (char *) "clGetPlatformIDs: ");
 
     // get the device id:
 
     status = clGetDeviceIDs(Platform, CL_DEVICE_TYPE_GPU, 1, &Device, NULL);
-    PrintCLError(status, "clGetDeviceIDs: ");
+    PrintCLError(status, (char *) "clGetDeviceIDs: ");
 
 
     // since this is an opengl interoperability program,
@@ -457,8 +405,8 @@ InitCL() {
     // 3. create an opencl context based on the opengl context:
 
     // OS X
-    CGLContextObj     kCGLContext     = CGLGetCurrentContext();
-    CGLShareGroupObj  kCGLShareGroup  = CGLGetShareGroup(kCGLContext);
+    CGLContextObj kCGLContext = CGLGetCurrentContext();
+    CGLShareGroupObj kCGLShareGroup = CGLGetShareGroup(kCGLContext);
 
     cl_context_properties props[] = {
             CL_CONTEXT_PROPERTY_USE_CGL_SHAREGROUP_APPLE,
@@ -467,7 +415,7 @@ InitCL() {
     };
 
     cl_context Context = clCreateContext(props, 1, &Device, NULL, NULL, &status);
-    PrintCLError(status, "clCreateContext: ");
+    PrintCLError(status, (char *) "clCreateContext: ");
 
     // 4. create an opencl command queue:
 
@@ -497,28 +445,28 @@ InitCL() {
     // 5. create the opencl version of the opengl buffers:
 
     dPobj = clCreateFromGLBuffer(Context, 0, hPobj, &status);
-    PrintCLError(status, "clCreateFromGLBuffer (1)");
+    PrintCLError(status, (char *) "clCreateFromGLBuffer (1)");
 
     dCobj = clCreateFromGLBuffer(Context, 0, hCobj, &status);
-    PrintCLError(status, "clCreateFromGLBuffer (2)");
+    PrintCLError(status, (char *) "clCreateFromGLBuffer (2)");
 
     // 5. create the opencl version of the velocity array:
 
     dVel = clCreateBuffer(Context, CL_MEM_READ_WRITE, 4 * sizeof(float) * NUM_PARTICLES, NULL, &status);
-    PrintCLError(status, "clCreateBuffer: ");
+    PrintCLError(status, (char *) "clCreateBuffer: ");
 
     // 6. enqueue the command to write the data from the host buffers to the Device buffers:
 
     status = clEnqueueWriteBuffer(CmdQueue, dVel, CL_FALSE, 0, 4 * sizeof(float) * NUM_PARTICLES, hVel, 0, NULL, NULL);
-    PrintCLError(status, "clEneueueWriteBuffer: ");
+    PrintCLError(status, (char *) "clEneueueWriteBuffer: ");
 
     // 7. read the Kernel code from a file:
 
     fseek(fp, 0, SEEK_END);
-    size_t fileSize = ftell(fp);
+    size_t fileSize = (size_t) ftell(fp);
     fseek(fp, 0, SEEK_SET);
     char *clProgramText = new char[fileSize + 1];        // leave room for '\0'
-    size_t n = fread(clProgramText, 1, fileSize, fp);
+    fread(clProgramText, 1, fileSize, fp);
     clProgramText[fileSize] = '\0';
     fclose(fp);
 
@@ -533,14 +481,14 @@ InitCL() {
 
     // 8. compile and link the Kernel code:
 
-    char *options = {""};
+    char *options = {(char *) ""};
     status = clBuildProgram(Program, 1, &Device, options, NULL, NULL);
     if (status != CL_SUCCESS) {
         size_t size;
         clGetProgramBuildInfo(Program, Device, CL_PROGRAM_BUILD_LOG, 0, NULL, &size);
         cl_char *log = new cl_char[size];
         clGetProgramBuildInfo(Program, Device, CL_PROGRAM_BUILD_LOG, size, log, NULL);
-        fprintf(stderr, "clBuildProgram failed:\n%s\n", log);
+        fprintf(stderr, "clBuildProgram failed:\n%p\n", log);
         delete[] log;
     }
 
@@ -573,19 +521,19 @@ InitCL() {
     // 9. create the Kernel object:
 
     Kernel = clCreateKernel(Program, "Particle", &status);
-    PrintCLError(status, "clCreateKernel failed: ");
+    PrintCLError(status, (char *) "clCreateKernel failed: ");
 
 
     // 10. setup the arguments to the Kernel object:
 
     status = clSetKernelArg(Kernel, 0, sizeof(cl_mem), &dPobj);
-    PrintCLError(status, "clSetKernelArg (1): ");
+    PrintCLError(status, (char *) "clSetKernelArg (1): ");
 
     status = clSetKernelArg(Kernel, 1, sizeof(cl_mem), &dVel);
-    PrintCLError(status, "clSetKernelArg (2): ");
+    PrintCLError(status, (char *) "clSetKernelArg (2): ");
 
     status = clSetKernelArg(Kernel, 2, sizeof(cl_mem), &dCobj);
-    PrintCLError(status, "clSetKernelArg (3): ");
+    PrintCLError(status, (char *) "clSetKernelArg (3): ");
 }
 
 
@@ -680,10 +628,10 @@ void
 InitLists() {
     SphereList = glGenLists(1);
     glNewList(SphereList, GL_COMPILE);
-    glColor3f(.9f, .9f, 0.);
+    glColor3f(.9f, .9f, 0.f);
     glPushMatrix();
-    glTranslatef(-100., -800., 0.);
-    glutWireSphere(600., 100., 100.);
+    glTranslatef(-100.f, -800.f, 0.f);
+    glutWireSphere(600., 100, 100);
     glPopMatrix();
     glEndList();
 
@@ -691,8 +639,8 @@ InitLists() {
     glNewList(AxesList, GL_COMPILE);
     glColor3fv(AXES_COLOR);
     glLineWidth(AXES_WIDTH);
-    Axes(150.);
-    glLineWidth(1.);
+    Axes(150.f);
+    glLineWidth(1.f);
     glEndList();
 }
 
@@ -703,7 +651,7 @@ InitLists() {
 //
 
 void
-Keyboard(unsigned char c, int x, int y) {
+Keyboard(unsigned char c, int __unused x, int __unused y) {
     switch (c) {
         case 'o':
         case 'O':
@@ -821,14 +769,14 @@ Reset() {
     Scale2 = 0.0;        // because add 1. to it in Display( )
     ShowPerformance = GLUIFALSE;
     WhichProjection = PERSP;
-    Xrot = Yrot = 0.;
-    TransXYZ[0] = TransXYZ[1] = TransXYZ[2] = 0.;
+    Xrot = Yrot = 0.f;
+    TransXYZ[0] = TransXYZ[1] = TransXYZ[2] = 0.f;
 
-    RotMatrix[0][1] = RotMatrix[0][2] = RotMatrix[0][3] = 0.;
-    RotMatrix[1][0] = RotMatrix[1][2] = RotMatrix[1][3] = 0.;
-    RotMatrix[2][0] = RotMatrix[2][1] = RotMatrix[2][3] = 0.;
-    RotMatrix[3][0] = RotMatrix[3][1] = RotMatrix[3][3] = 0.;
-    RotMatrix[0][0] = RotMatrix[1][1] = RotMatrix[2][2] = RotMatrix[3][3] = 1.;
+    RotMatrix[0][1] = RotMatrix[0][2] = RotMatrix[0][3] = 0.f;
+    RotMatrix[1][0] = RotMatrix[1][2] = RotMatrix[1][3] = 0.f;
+    RotMatrix[2][0] = RotMatrix[2][1] = RotMatrix[2][3] = 0.f;
+    RotMatrix[3][0] = RotMatrix[3][1] = RotMatrix[3][3] = 0.f;
+    RotMatrix[0][0] = RotMatrix[1][1] = RotMatrix[2][2] = RotMatrix[3][3] = 1.f;
 }
 
 
@@ -840,7 +788,7 @@ ResetParticles() {
         points[i].x = Ranf(XMIN, XMAX);
         points[i].y = Ranf(YMIN, YMAX);
         points[i].z = Ranf(ZMIN, ZMAX);
-        points[i].w = 1.;
+        points[i].w = 1.f;
     }
     glUnmapBuffer(GL_ARRAY_BUFFER);
 
@@ -848,24 +796,24 @@ ResetParticles() {
     glBindBuffer(GL_ARRAY_BUFFER, hCobj);
     struct rgba *colors = (struct rgba *) glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
     for (int i = 0; i < NUM_PARTICLES; i++) {
-        colors[i].r = Ranf(.3f, 1.);
-        colors[i].g = Ranf(.3f, 1.);
-        colors[i].b = Ranf(.3f, 1.);
-        colors[i].a = 1.;
+        colors[i].r = Ranf(.3f, 1.f);
+        colors[i].g = Ranf(.3f, 1.f);
+        colors[i].b = Ranf(.3f, 1.f);
+        colors[i].a = 1.f;
     }
     glUnmapBuffer(GL_ARRAY_BUFFER);
 
 
     for (int i = 0; i < NUM_PARTICLES; i++) {
         hVel[i].x = Ranf(VMIN, VMAX);
-        hVel[i].y = Ranf(0., VMAX);
+        hVel[i].y = Ranf(0.f, VMAX);
         hVel[i].z = Ranf(VMIN, VMAX);
     }
 }
 
 
 void
-Resize(int width, int height) {
+Resize(int __unused width, int __unused height) {
     glutSetWindow(MainWindow);
     glutPostRedisplay();
 }
@@ -884,20 +832,14 @@ Visibility(int state) {
     }
 }
 
-
-
-
-
-
-
 // the stroke characters 'X' 'Y' 'Z' :
 
 static float xx[] = {
-        0., 1., 0., 1.
+        0.f, 1.f, 0.f, 1.f
 };
 
 static float xy[] = {
-        -.5, .5, .5, -.5
+        -.5f, .5, .5, -.5f
 };
 
 static int xorder[] = {
@@ -906,11 +848,11 @@ static int xorder[] = {
 
 
 static float yx[] = {
-        0., 0., -.5, .5
+        0.f, 0.f, -.5f, .5
 };
 
 static float yy[] = {
-        0., .6f, 1., 1.
+        0.f, .6f, 1.f, 1.f
 };
 
 static int yorder[] = {
@@ -919,11 +861,11 @@ static int yorder[] = {
 
 
 static float zx[] = {
-        1., 0., 1., 0., .25, .75
+        1.f, 0.f, 1.f, 0.f, .25, .75
 };
 
 static float zy[] = {
-        .5, .5, -.5, -.5, 0., 0.
+        .5, .5, -.5f, -.5f, 0.f, 0.f
 };
 
 static int zorder[] = {
@@ -949,17 +891,17 @@ static int zorder[] = {
 void
 Axes(float length) {
     glBegin(GL_LINE_STRIP);
-    glVertex3f(length, 0., 0.);
-    glVertex3f(0., 0., 0.);
-    glVertex3f(0., length, 0.);
+    glVertex3f(length, 0.f, 0.f);
+    glVertex3f(0.f, 0.f, 0.f);
+    glVertex3f(0.f, length, 0.f);
     glEnd();
     glBegin(GL_LINE_STRIP);
-    glVertex3f(0., 0., 0.);
-    glVertex3f(0., 0., length);
+    glVertex3f(0.f, 0.f, 0.f);
+    glVertex3f(0.f, 0.f, length);
     glEnd();
 
-    float fact = LENFRAC * length;
-    float base = BASEFRAC * length;
+    float fact = (float) (LENFRAC * length);
+    float base = (float) (BASEFRAC * length);
 
     glBegin(GL_LINE_STRIP);
     for (int i = 0; i < 4; i++) {
@@ -1006,10 +948,6 @@ Axes(float length) {
 }
 
 
-//
-// exit gracefully:
-//
-
 void
 Quit() {
     Glui->close();
@@ -1030,12 +968,8 @@ Quit() {
 }
 
 
-#define TOP    2147483647.        // 2^31 - 1
-
 float
 Ranf(float low, float high) {
-    long random();        // returns integer 0 - TOP
-
     float r = (float) rand();
     return (low + r * (high - low) / (float) RAND_MAX);
 }
@@ -1048,7 +982,7 @@ IsCLExtensionSupported(const char *extension) {
     if (extension == NULL || extension[0] == '\0')
         return false;
 
-    char *where = (char *) strchr(extension, ' ');
+    char *where = strchr(extension, ' ');
     if (where != NULL)
         return false;
 
@@ -1060,7 +994,7 @@ IsCLExtensionSupported(const char *extension) {
     clGetDeviceInfo(Device, CL_DEVICE_EXTENSIONS, extensionSize, extensions, NULL);
 
     for (char *start = extensions; ;) {
-        where = (char *) strstr((const char *) start, extension);
+        where = strstr((const char *) start, extension);
         if (where == 0) {
             delete[] extensions;
             return false;
@@ -1074,15 +1008,12 @@ IsCLExtensionSupported(const char *extension) {
         }
         start = terminator;
     }
-
-    delete[] extensions;
-    return false;
 }
 
 
 struct errorcode {
     cl_int statusCode;
-    char *meaning;
+    const char *meaning;
 }
         ErrorCodes[] =
         {
@@ -1141,7 +1072,7 @@ PrintCLError(cl_int errorCode, char *prefix, FILE *fp) {
         return;
 
     const int numErrorCodes = sizeof(ErrorCodes) / sizeof(struct errorcode);
-    char *meaning = "";
+    const char *meaning = "";
     for (int i = 0; i < numErrorCodes; i++) {
         if (errorCode == ErrorCodes[i].statusCode) {
             meaning = ErrorCodes[i].meaning;
