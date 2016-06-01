@@ -34,7 +34,8 @@ Particle( global point *dPobj, global vector *dVel, global color *dCobj )
 {
 	const float4 G       = (float4) ( 0., -9.8, 0., 0. );
 	const float  DT      = 0.1;
-	const sphere Sphere1 = (sphere)( -100., -800., 0.,  600. );
+	const sphere Sphere1 = (sphere)( -200., -300., 0.,  150. );
+	const sphere Sphere2 = (sphere)( 200., -350., 0.,  100. );
 	int gid = get_global_id( 0 );
 
 	point  p = dPobj[gid];
@@ -51,6 +52,13 @@ Particle( global point *dPobj, global vector *dVel, global color *dCobj )
 		pp = p + vp*DT + .5*DT*DT*G;
 	}
 
+    if( IsInsideSphere( pp, Sphere2 ) )
+    {
+        vp = BounceSphere( p, v, Sphere2 );
+        pp = p + vp*DT + .5*DT*DT*G;
+    }
+
 	dPobj[gid] = pp;
 	dVel[gid]  = vp;
+	dCobj[gid]  = vp;
 }

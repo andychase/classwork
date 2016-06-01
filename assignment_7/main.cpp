@@ -16,7 +16,7 @@
 
 // title of these windows:
 
-const char *WINDOWTITLE = {"OpenCL/OpenGL Particle System -- Joe Parallel"};
+const char *WINDOWTITLE = {"CL/GL Particle System -- Andrew Chase"};
 const char *GLUITITLE = {"User Interface Window"};
 
 // random parameters:					
@@ -28,14 +28,14 @@ const float YMAX = {100.0};
 const float ZMIN = {-100.0f};
 const float ZMAX = {100.0};
 
-const float VMIN = {-100.f};
-const float VMAX = {100.f};
+const float VMIN = {-10.f};
+const float VMAX = {10.f};
 
 
 const int NUM_PARTICLES = 1024 * 1024;
 const int LOCAL_SIZE = 32;
-const char *CL_FILE_NAME = {"particles.cl"};
-const char *CL_BINARY_NAME = {"particles.nv"};
+const char *CL_FILE_NAME = {"chasean_particles.cl"};
+const char *CL_BINARY_NAME = {"chasean_particles.nv"};
 
 
 const int GLUIFALSE = {false};
@@ -626,12 +626,19 @@ InitGraphics() {
 
 void
 InitLists() {
-    SphereList = glGenLists(1);
+    SphereList = glGenLists(2);
     glNewList(SphereList, GL_COMPILE);
+    // Sphere 1
     glColor3f(.9f, .9f, 0.f);
     glPushMatrix();
-    glTranslatef(-100.f, -800.f, 0.f);
-    glutWireSphere(600., 100, 100);
+    glTranslatef(-200.f, -300.f, 0.f);
+    glutWireSphere(150., 100, 100);
+    glPopMatrix();
+    // Sphere 2
+    glColor3f(.9f, .9f, 0.f);
+    glPushMatrix();
+    glTranslatef(200.f, -350.f, 0.f);
+    glutWireSphere(100., 100, 100);
     glPopMatrix();
     glEndList();
 
@@ -786,7 +793,7 @@ ResetParticles() {
     struct xyzw *points = (struct xyzw *) glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
     for (int i = 0; i < NUM_PARTICLES; i++) {
         points[i].x = Ranf(XMIN, XMAX);
-        points[i].y = Ranf(YMIN, YMAX);
+        points[i].y = Ranf(YMIN, YMAX*10);
         points[i].z = Ranf(ZMIN, ZMAX);
         points[i].w = 1.f;
     }
@@ -796,9 +803,9 @@ ResetParticles() {
     glBindBuffer(GL_ARRAY_BUFFER, hCobj);
     struct rgba *colors = (struct rgba *) glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
     for (int i = 0; i < NUM_PARTICLES; i++) {
-        colors[i].r = Ranf(.3f, 1.f);
-        colors[i].g = Ranf(.3f, 1.f);
-        colors[i].b = Ranf(.3f, 1.f);
+        colors[i].r = 1.0f;
+        colors[i].g = 1.0f;
+        colors[i].b = 1.0f;
         colors[i].a = 1.f;
     }
     glUnmapBuffer(GL_ARRAY_BUFFER);
