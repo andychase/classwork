@@ -1,83 +1,130 @@
 """
+Andy Chase
+OS2 Concurrency 5
+
 References: http://greenteapress.com/semaphores/downey08semaphores.pdf
 """
+import traceback
+import functools
 import multiprocessing
+import sys
+from time import sleep
+
+smoking_ascii = """
+                   )
+                  (
+      _ ___________ )
+     [_[___________#   jgs
+"""
+
+
+def trace_unhandled_exceptions(func):
+    """
+    From: https://stackoverflow.com/questions/6728236/exception-thrown-in-multiprocessing-pool-not-detected
+    """
+
+    @functools.wraps(func)
+    def wrapped_func(*args, **kwargs):
+        try:
+            func(*args, **kwargs)
+        except:
+            print 'Exception in ' + func.__name__
+            traceback.print_exc()
+
+    return wrapped_func
+
 
 agentSem = multiprocessing.Semaphore(1)
 tobacco = multiprocessing.Semaphore(0)
 paper = multiprocessing.Semaphore(0)
 match = multiprocessing.Semaphore(0)
+q = multiprocessing.Queue()
 
 
-def agent1():
-    agentSem.acquire()
-    print("agent1")
-    tobacco.release()
-    paper.release()
-
-
-def agent2():
-    agentSem.acquire()
-    print("agent2")
-    paper.release()
-    match.release()
-
-
-def agent3():
-    agentSem.acquire()
-    print("agent3")
-    tobacco.release()
-    match.release()
-
-
-def make_cigarette(has_message):
-    print("Making a cig, already has: {}".format(has_message))
-    for i in (agentSem, tobacco, paper, match):
-        print(i)
-    print("")
+def make_cigarette(smoker, has_message):
+    q.put("{} making a cig, already has: {}".format(smoker, has_message))
 
 
 def smoke():
-    print(":()=~~~")
+    sleep(1)
 
 
+@trace_unhandled_exceptions
+def agent1():
+    while True:
+        agentSem.acquire()
+        q.put("agent1 placing tobacco and paper")
+        tobacco.release()
+        paper.release()
+
+
+@trace_unhandled_exceptions
+def agent2():
+    while True:
+        agentSem.acquire()
+        q.put("agent2 placing paper and match")
+        paper.release()
+        match.release()
+
+
+@trace_unhandled_exceptions
+def agent3():
+    while True:
+        agentSem.acquire()
+        q.put("agent3 placing tobacco and match")
+        tobacco.release()
+        match.release()
+
+
+@trace_unhandled_exceptions
 def smoker1():
     while True:
-        with paper:
-            if not tobacco.acquire(block=False):
-                continue
-            else:
-                make_cigarette("match")
-                tobacco.release()
-                agentSem.release()
-                smoke()
-                return
+        paper.acquire()
+        if not tobacco.acquire(block=False):
+            paper.release()
+            continue
+        else:
+            make_cigarette("smoker1", "match, acquired: paper, tobacco")
+            tobacco.release()
+            paper.release()
+            agentSem.release()
+            smoke()
 
 
+@trace_unhandled_exceptions
 def smoker2():
     while True:
-        with paper:
-            if not match.acquire(block=False):
-                continue
-            else:
-                make_cigarette("tobacco")
-                match.release()
-                agentSem.release()
-                smoke()
-                return
+        match.acquire()
+        if not paper.acquire(block=False):
+            match.release()
+            continue
+        else:
+            make_cigarette("smoker2", "tobacco, acquired: match, paper")
+            paper.release()
+            match.release()
+            agentSem.release()
+            smoke()
 
 
+@trace_unhandled_exceptions
 def smoker3():
     while True:
-        with match:
-            if not paper.acquire(block=False):
-                continue
-            else:
-                make_cigarette("tobacco")
-                paper.release()
-                agentSem.release()
-                smoke()
-                return
+        match.acquire()
+        if not tobacco.acquire(block=False):
+            match.release()
+            continue
+        else:
+            make_cigarette("smoker3", "paper, acquired: tobacco, match")
+            tobacco.release()
+            match.release()
+            agentSem.release()
+            smoke()
+
+
+@trace_unhandled_exceptions
+def ui_queue():
+    while True:
+        print(q.get())
 
 
 def init(*args):
@@ -85,19 +132,22 @@ def init(*args):
     global tobacco
     global paper
     global match
-    (agentSem, tobacco, paper, match) = args
+    global q
+    (agentSem, tobacco, paper, match, q) = args
 
 
 def main():
-    init_args = (agentSem, tobacco, paper, match)
-    pool = multiprocessing.Pool(6, initializer=init, initargs=init_args)
+    q = multiprocessing.Queue()
+    init_args = (agentSem, tobacco, paper, match, q)
+    pool = multiprocessing.Pool(7, initializer=init, initargs=init_args)
 
     pool.apply_async(agent1)
-    # pool.apply_async(agent2)
-    # pool.apply_async(agent3)
+    pool.apply_async(agent2)
+    pool.apply_async(agent3)
     pool.apply_async(smoker1)
-    # pool.apply_async(smoker2)
-    # pool.apply_async(smoker3)
+    pool.apply_async(smoker2)
+    pool.apply_async(smoker3)
+    pool.apply_async(ui_queue)
     pool.close()
     pool.join()
 
