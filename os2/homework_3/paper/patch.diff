@@ -1,0 +1,225 @@
+diff --git a/drivers/block/Kconfig b/drivers/block/Kconfig
+index 014a1cf..30d6f4d 100644
+--- a/drivers/block/Kconfig
++++ b/drivers/block/Kconfig
+@@ -18,6 +18,12 @@ if BLK_DEV
+ config BLK_DEV_NULL_BLK
+ 	tristate "Null test block driver"
+ 
++config CONFIG_MEMDISK_BLK
++        tristate "Oregon State U Ramdisk"
++         ---help---
++		 This is the driver written by Andy which encrypts
++		 data to and from a RAM disk device.
++
+ config BLK_DEV_FD
+ 	tristate "Normal floppy disk support"
+ 	depends on ARCH_MAY_HAVE_PC_FDC
+diff --git a/drivers/block/Makefile b/drivers/block/Makefile
+index 02b688d..3958586 100644
+--- a/drivers/block/Makefile
++++ b/drivers/block/Makefile
+@@ -30,6 +30,7 @@ obj-$(CONFIG_BLK_DEV_UMEM)	+= umem.o
+ obj-$(CONFIG_BLK_DEV_NBD)	+= nbd.o
+ obj-$(CONFIG_BLK_DEV_CRYPTOLOOP) += cryptoloop.o
+ obj-$(CONFIG_VIRTIO_BLK)	+= virtio_blk.o
++obj-m	                    += memdiskblk.o
+ 
+ obj-$(CONFIG_BLK_DEV_SX8)	+= sx8.o
+ obj-$(CONFIG_BLK_DEV_HD)	+= hd.o
+diff --git a/drivers/block/memdiskblk.c b/drivers/block/memdiskblk.c
+new file mode 100644
+index 0000000..4cf3ee6
+--- /dev/null
++++ b/drivers/block/memdiskblk.c
+@@ -0,0 +1,190 @@
++/*
++ * Andy Chase
++ * CS444 -- Memory Encrypting Disk Driver
++ *
++ * Based on:
++ *
++ * http://blog.superpat.com/2010/05/04/a-simple-block-driver-for-linux-kernel-2-6-31/
++ * https://github.com/davidmerrick/Classes/blob/master/CS411/project3/osurd.c
++ * https://github.com/ryleyherrington/linux_kernel_411/blob/master/device_driver/device_driver.c
++ * http://www.oreilly.com/openbook/linuxdrive3/book/ch16.pdf
++ * http://lxr.free-electrons.com/source/net/bluetooth/smp.c?v=3.14#L54
++ */
++
++#include <linux/module.h>
++#include <linux/moduleparam.h>
++#include <linux/init.h>
++
++#include <linux/kernel.h>	/* printk() */
++#include <linux/fs.h>		/* everything... */
++#include <linux/errno.h>	/* error codes */
++#include <linux/types.h>	/* size_t */
++#include <linux/vmalloc.h>
++#include <linux/genhd.h>
++#include <linux/blkdev.h>
++#include <linux/hdreg.h>
++#include <linux/crypto.h>
++#include <linux/scatterlist.h>
++
++/* Module Info */
++MODULE_LICENSE("GPL");
++MODULE_AUTHOR("Andrew Chase");
++MODULE_DESCRIPTION("Homework 3: Encrypted Block Device");
++MODULE_ALIAS("membdiskblk");
++
++/* Parameters */
++static int major_num = 0;
++static int logical_block_size = 512;
++static int nsectors = 1024;	/* How big the drive is */
++static char *key = "some_key_yo";
++module_param(key, charp, 0000);
++
++#define KERNEL_SECTOR_SIZE 512
++
++static struct request_queue *Queue;
++struct crypto_cipher *tfm;
++
++static struct memdiskblk_device {
++	unsigned long size;
++	spinlock_t lock;
++	u8 *data;
++	struct gendisk *gd;
++} Device;
++
++static void
++memdiskblk_transfer(struct memdiskblk_device *dev, unsigned long sector,
++		    unsigned long nsect, char *buffer, int write)
++{
++	unsigned long offset = sector * KERNEL_SECTOR_SIZE;
++	unsigned long nbytes = nsect * KERNEL_SECTOR_SIZE;
++	int i;
++	if ((offset + nbytes) > dev->size) {
++		printk(KERN_NOTICE "sbd: Beyond-end write (%ld %ld)\n", offset,
++		       nbytes);
++		return;
++	}
++	crypto_cipher_setkey(tfm, key, strlen(key));
++
++	if (write) {
++		printk("Writing to memdiskblk -- \n");
++		if (nbytes > 3)
++			printk("Raw data: %x%x%x\n", (buffer)[0], (buffer)[1], (buffer)[2]);
++		for (i = 0; i < nbytes; i += crypto_cipher_blocksize(tfm)) {
++			memset(dev->data + offset + i, 0,
++				   crypto_cipher_blocksize(tfm));
++			crypto_cipher_encrypt_one(tfm, dev->data + offset + i,
++						  buffer + i);
++		}
++
++		if (nbytes > 3)
++			printk("Encrypted data: %x%x%x\n", (dev->data + offset)[0], (dev->data + offset)[1], (dev->data + offset)[2]);
++	} else {
++		printk("Reading from memdiskblk --\n");
++		if (nbytes > 3)
++			printk("Encrypted data: %x%x%x\n", (buffer)[0], (buffer)[1], (buffer)[2]);
++		for (i = 0; i < nbytes; i += crypto_cipher_blocksize(tfm)) {
++			crypto_cipher_decrypt_one(tfm, buffer + i,
++						  dev->data + offset + i);
++		}
++		if (nbytes > 3)
++			printk("Decrypted data: %x%x%x\n", (dev->data + offset)[0], (dev->data + offset)[1], (dev->data + offset)[2]);
++	}
++}
++
++static void memdiskblk_request(struct request_queue *q)
++{
++	struct request *req;
++
++	req = blk_fetch_request(q);
++	while (req != NULL) {
++		if (req == NULL || (req->cmd_type != REQ_TYPE_FS)) {
++			printk(KERN_NOTICE "Skip non-CMD request\n");
++			__blk_end_request_all(req, -EIO);
++			continue;
++		}
++		memdiskblk_transfer(&Device, blk_rq_pos(req),
++				    blk_rq_cur_sectors(req), req->buffer,
++				    rq_data_dir(req));
++		if (!__blk_end_request_cur(req, 0)) {
++			req = blk_fetch_request(q);
++		}
++	}
++}
++
++int memdiskblk_getgeo(struct block_device *block_device,
++		      struct hd_geometry *geo)
++{
++	long size;
++
++	size = Device.size * (logical_block_size / KERNEL_SECTOR_SIZE);
++	geo->cylinders = (size & ~0x3f) >> 6;
++	geo->heads = 4;
++	geo->sectors = 16;
++	geo->start = 0;
++	return 0;
++}
++
++static struct block_device_operations memdiskblk_ops = {
++	.owner = THIS_MODULE,
++	.getgeo = memdiskblk_getgeo
++};
++
++static int __init memdiskblk_init(void)
++{
++	tfm = crypto_alloc_cipher("aes", 0, 0);
++	/* Error checking for crypto */
++	if (IS_ERR(tfm)) {
++		printk(KERN_ERR "memdiskblk -- cipher allocation failed");
++		return PTR_ERR(tfm);
++	}
++
++	Device.size = nsectors * logical_block_size;
++	spin_lock_init(&Device.lock);
++	Device.data = vmalloc(Device.size);
++	if (Device.data == NULL)
++		return -ENOMEM;
++
++	Queue = blk_init_queue(memdiskblk_request, &Device.lock);
++	if (Queue == NULL)
++		goto out;
++	blk_queue_logical_block_size(Queue, logical_block_size);
++
++	major_num = register_blkdev(major_num, "memdiskblk");
++	if (major_num < 0) {
++		printk(KERN_WARNING "memdiskblk: unable to get major number\n");
++		goto out;
++	}
++
++	Device.gd = alloc_disk(16);
++	if (!Device.gd)
++		goto out_unregister;
++	Device.gd->major = major_num;
++	Device.gd->first_minor = 0;
++	Device.gd->fops = &memdiskblk_ops;
++	Device.gd->private_data = &Device;
++	strcpy(Device.gd->disk_name, "memdiskblk0");
++	set_capacity(Device.gd, nsectors);
++	Device.gd->queue = Queue;
++	add_disk(Device.gd);
++
++	return 0;
++
++ out_unregister:
++	unregister_blkdev(major_num, "memdiskblk");
++ out:
++	crypto_free_cipher(tfm);
++	vfree(Device.data);
++	return -ENOMEM;
++}
++
++static void __exit memdiskblk_exit(void)
++{
++	del_gendisk(Device.gd);
++	put_disk(Device.gd);
++	unregister_blkdev(major_num, "memdiskblk");
++	blk_cleanup_queue(Queue);
++	vfree(Device.data);
++}
++
++module_init(memdiskblk_init);
++module_exit(memdiskblk_exit);

@@ -1,0 +1,10 @@
+\contentsline {section}{\numberline {I}Work Log}{3}{section.1}
+\contentsline {section}{\numberline {II}Questions}{3}{section.2}
+\contentsline {subsection}{\numberline {\unhbox \voidb@x \hbox {II-A}}The design you plan to use to implement the SSTF algorithms.}{3}{subsection.2.1}
+\contentsline {subsection}{\numberline {\unhbox \voidb@x \hbox {II-B}}What do you think the main point of this assignment is?}{3}{subsection.2.2}
+\contentsline {subsection}{\numberline {\unhbox \voidb@x \hbox {II-C}}How did you personally approach the problem? Design decisions, algorithm, etc.}{3}{subsection.2.3}
+\contentsline {subsection}{\numberline {\unhbox \voidb@x \hbox {II-D}}How did you ensure your solution was correct? Testing details, for instance.}{3}{subsection.2.4}
+\contentsline {subsection}{\numberline {\unhbox \voidb@x \hbox {II-E}}What did you learn?}{4}{subsection.2.5}
+\contentsline {section}{\numberline {III}Concurrency Exercise: Git Log}{4}{section.3}
+\contentsline {section}{\numberline {IV}Code Listing}{4}{section.4}
+\contentsline {subsection}{\numberline {\unhbox \voidb@x \hbox {IV-A}}sstf-iosched.c}{4}{subsection.4.1}

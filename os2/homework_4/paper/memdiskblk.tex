@@ -1,0 +1,192 @@
+\begin{Verbatim}[commandchars=\\\{\},numbers=left,firstnumber=1,stepnumber=1]
+\PY{c+cm}{/*}
+\PY{c+cm}{ * Andy Chase}
+\PY{c+cm}{ * CS444 \PYZhy{}\PYZhy{} Memory Encrypting Disk Driver}
+\PY{c+cm}{ *}
+\PY{c+cm}{ * Based on:}
+\PY{c+cm}{ *}
+\PY{c+cm}{ * http://blog.superpat.com/2010/05/04/a\PYZhy{}simple\PYZhy{}block\PYZhy{}driver\PYZhy{}for\PYZhy{}linux\PYZhy{}kernel\PYZhy{}2\PYZhy{}6\PYZhy{}31/}
+\PY{c+cm}{ * https://github.com/davidmerrick/Classes/blob/master/CS411/project3/osurd.c}
+\PY{c+cm}{ * https://github.com/ryleyherrington/linux\PYZus{}kernel\PYZus{}411/blob/master/device\PYZus{}driver/device\PYZus{}driver.c}
+\PY{c+cm}{ * http://www.oreilly.com/openbook/linuxdrive3/book/ch16.pdf}
+\PY{c+cm}{ * http://lxr.free\PYZhy{}electrons.com/source/net/bluetooth/smp.c?v=3.14\PYZsh{}L54}
+\PY{c+cm}{ */}
+
+\PY{c+cp}{\PYZsh{}}\PY{c+cp}{include \PYZlt{}linux}\PY{c+cp}{/}\PY{c+cp}{module.h\PYZgt{}}
+\PY{c+cp}{\PYZsh{}}\PY{c+cp}{include \PYZlt{}linux}\PY{c+cp}{/}\PY{c+cp}{moduleparam.h\PYZgt{}}
+\PY{c+cp}{\PYZsh{}}\PY{c+cp}{include \PYZlt{}linux}\PY{c+cp}{/}\PY{c+cp}{init.h\PYZgt{}}
+
+\PY{c+cp}{\PYZsh{}}\PY{c+cp}{include \PYZlt{}linux}\PY{c+cp}{/}\PY{c+cp}{kernel.h\PYZgt{}	}\PY{c+cm}{/* printk() */}
+\PY{c+cp}{\PYZsh{}}\PY{c+cp}{include \PYZlt{}linux}\PY{c+cp}{/}\PY{c+cp}{fs.h\PYZgt{}		}\PY{c+cm}{/* everything... */}
+\PY{c+cp}{\PYZsh{}}\PY{c+cp}{include \PYZlt{}linux}\PY{c+cp}{/}\PY{c+cp}{errno.h\PYZgt{}	}\PY{c+cm}{/* error codes */}
+\PY{c+cp}{\PYZsh{}}\PY{c+cp}{include \PYZlt{}linux}\PY{c+cp}{/}\PY{c+cp}{types.h\PYZgt{}	}\PY{c+cm}{/* size\PYZus{}t */}
+\PY{c+cp}{\PYZsh{}}\PY{c+cp}{include \PYZlt{}linux}\PY{c+cp}{/}\PY{c+cp}{vmalloc.h\PYZgt{}}
+\PY{c+cp}{\PYZsh{}}\PY{c+cp}{include \PYZlt{}linux}\PY{c+cp}{/}\PY{c+cp}{genhd.h\PYZgt{}}
+\PY{c+cp}{\PYZsh{}}\PY{c+cp}{include \PYZlt{}linux}\PY{c+cp}{/}\PY{c+cp}{blkdev.h\PYZgt{}}
+\PY{c+cp}{\PYZsh{}}\PY{c+cp}{include \PYZlt{}linux}\PY{c+cp}{/}\PY{c+cp}{hdreg.h\PYZgt{}}
+\PY{c+cp}{\PYZsh{}}\PY{c+cp}{include \PYZlt{}linux}\PY{c+cp}{/}\PY{c+cp}{crypto.h\PYZgt{}}
+\PY{c+cp}{\PYZsh{}}\PY{c+cp}{include \PYZlt{}linux}\PY{c+cp}{/}\PY{c+cp}{scatterlist.h\PYZgt{}}
+
+\PY{c+cm}{/* Module Info */}
+\PY{n}{MODULE\PYZus{}LICENSE}\PY{p}{(}\PY{l+s}{\PYZdq{}}\PY{l+s}{GPL}\PY{l+s}{\PYZdq{}}\PY{p}{)}\PY{p}{;}
+\PY{n}{MODULE\PYZus{}AUTHOR}\PY{p}{(}\PY{l+s}{\PYZdq{}}\PY{l+s}{Andrew Chase}\PY{l+s}{\PYZdq{}}\PY{p}{)}\PY{p}{;}
+\PY{n}{MODULE\PYZus{}DESCRIPTION}\PY{p}{(}\PY{l+s}{\PYZdq{}}\PY{l+s}{Homework 3: Encrypted Block Device}\PY{l+s}{\PYZdq{}}\PY{p}{)}\PY{p}{;}
+\PY{n}{MODULE\PYZus{}ALIAS}\PY{p}{(}\PY{l+s}{\PYZdq{}}\PY{l+s}{membdiskblk}\PY{l+s}{\PYZdq{}}\PY{p}{)}\PY{p}{;}
+
+\PY{c+cm}{/* Parameters */}
+\PY{k}{static} \PY{k+kt}{int} \PY{n}{major\PYZus{}num} \PY{o}{=} \PY{l+m+mi}{0}\PY{p}{;}
+\PY{k}{static} \PY{k+kt}{int} \PY{n}{logical\PYZus{}block\PYZus{}size} \PY{o}{=} \PY{l+m+mi}{512}\PY{p}{;}
+\PY{k}{static} \PY{k+kt}{int} \PY{n}{nsectors} \PY{o}{=} \PY{l+m+mi}{1024}\PY{p}{;}	\PY{c+cm}{/* How big the drive is */}
+\PY{k}{static} \PY{k+kt}{char} \PY{o}{*}\PY{n}{key} \PY{o}{=} \PY{l+s}{\PYZdq{}}\PY{l+s}{some\PYZus{}key\PYZus{}yo}\PY{l+s}{\PYZdq{}}\PY{p}{;}
+\PY{n}{module\PYZus{}param}\PY{p}{(}\PY{n}{key}\PY{p}{,} \PY{n}{charp}\PY{p}{,} \PY{l+m+mo}{0000}\PY{p}{)}\PY{p}{;}
+
+\PY{c+cp}{\PYZsh{}}\PY{c+cp}{define KERNEL\PYZus{}SECTOR\PYZus{}SIZE 512}
+
+\PY{k}{static} \PY{k}{struct} \PY{n}{request\PYZus{}queue} \PY{o}{*}\PY{n}{Queue}\PY{p}{;}
+\PY{k}{struct} \PY{n}{crypto\PYZus{}cipher} \PY{o}{*}\PY{n}{tfm}\PY{p}{;}
+
+\PY{k}{static} \PY{k}{struct} \PY{n}{memdiskblk\PYZus{}device} \PY{p}{\PYZob{}}
+	\PY{k+kt}{unsigned} \PY{k+kt}{long} \PY{n}{size}\PY{p}{;}
+	\PY{k+kt}{spinlock\PYZus{}t} \PY{n}{lock}\PY{p}{;}
+	\PY{n}{u8} \PY{o}{*}\PY{n}{data}\PY{p}{;}
+	\PY{k}{struct} \PY{n}{gendisk} \PY{o}{*}\PY{n}{gd}\PY{p}{;}
+\PY{p}{\PYZcb{}} \PY{n}{Device}\PY{p}{;}
+
+\PY{k}{static} \PY{k+kt}{void}
+\PY{n+nf}{memdiskblk\PYZus{}transfer}\PY{p}{(}\PY{k}{struct} \PY{n}{memdiskblk\PYZus{}device} \PY{o}{*}\PY{n}{dev}\PY{p}{,} \PY{k+kt}{unsigned} \PY{k+kt}{long} \PY{n}{sector}\PY{p}{,}
+		    \PY{k+kt}{unsigned} \PY{k+kt}{long} \PY{n}{nsect}\PY{p}{,} \PY{k+kt}{char} \PY{o}{*}\PY{n}{buffer}\PY{p}{,} \PY{k+kt}{int} \PY{n}{write}\PY{p}{)}
+\PY{p}{\PYZob{}}
+	\PY{k+kt}{unsigned} \PY{k+kt}{long} \PY{n}{offset} \PY{o}{=} \PY{n}{sector} \PY{o}{*} \PY{n}{KERNEL\PYZus{}SECTOR\PYZus{}SIZE}\PY{p}{;}
+	\PY{k+kt}{unsigned} \PY{k+kt}{long} \PY{n}{nbytes} \PY{o}{=} \PY{n}{nsect} \PY{o}{*} \PY{n}{KERNEL\PYZus{}SECTOR\PYZus{}SIZE}\PY{p}{;}
+	\PY{k+kt}{int} \PY{n}{i}\PY{p}{;}
+	\PY{k}{if} \PY{p}{(}\PY{p}{(}\PY{n}{offset} \PY{o}{+} \PY{n}{nbytes}\PY{p}{)} \PY{o}{\PYZgt{}} \PY{n}{dev}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{size}\PY{p}{)} \PY{p}{\PYZob{}}
+		\PY{n}{printk}\PY{p}{(}\PY{n}{KERN\PYZus{}NOTICE} \PY{l+s}{\PYZdq{}}\PY{l+s}{sbd: Beyond\PYZhy{}end write (\PYZpc{}ld \PYZpc{}ld)}\PY{l+s+se}{\PYZbs{}n}\PY{l+s}{\PYZdq{}}\PY{p}{,} \PY{n}{offset}\PY{p}{,}
+		       \PY{n}{nbytes}\PY{p}{)}\PY{p}{;}
+		\PY{k}{return}\PY{p}{;}
+	\PY{p}{\PYZcb{}}
+	\PY{n}{crypto\PYZus{}cipher\PYZus{}setkey}\PY{p}{(}\PY{n}{tfm}\PY{p}{,} \PY{n}{key}\PY{p}{,} \PY{n}{strlen}\PY{p}{(}\PY{n}{key}\PY{p}{)}\PY{p}{)}\PY{p}{;}
+
+	\PY{k}{if} \PY{p}{(}\PY{n}{write}\PY{p}{)} \PY{p}{\PYZob{}}
+		\PY{n}{printk}\PY{p}{(}\PY{l+s}{\PYZdq{}}\PY{l+s}{Writing to memdiskblk \PYZhy{}\PYZhy{} }\PY{l+s+se}{\PYZbs{}n}\PY{l+s}{\PYZdq{}}\PY{p}{)}\PY{p}{;}
+		\PY{k}{if} \PY{p}{(}\PY{n}{nbytes} \PY{o}{\PYZgt{}} \PY{l+m+mi}{3}\PY{p}{)}
+			\PY{n}{printk}\PY{p}{(}\PY{l+s}{\PYZdq{}}\PY{l+s}{Raw data: \PYZpc{}x\PYZpc{}x\PYZpc{}x}\PY{l+s+se}{\PYZbs{}n}\PY{l+s}{\PYZdq{}}\PY{p}{,} \PY{p}{(}\PY{n}{buffer}\PY{p}{)}\PY{p}{[}\PY{l+m+mi}{0}\PY{p}{]}\PY{p}{,} \PY{p}{(}\PY{n}{buffer}\PY{p}{)}\PY{p}{[}\PY{l+m+mi}{1}\PY{p}{]}\PY{p}{,} \PY{p}{(}\PY{n}{buffer}\PY{p}{)}\PY{p}{[}\PY{l+m+mi}{2}\PY{p}{]}\PY{p}{)}\PY{p}{;}
+		\PY{k}{for} \PY{p}{(}\PY{n}{i} \PY{o}{=} \PY{l+m+mi}{0}\PY{p}{;} \PY{n}{i} \PY{o}{\PYZlt{}} \PY{n}{nbytes}\PY{p}{;} \PY{n}{i} \PY{o}{+}\PY{o}{=} \PY{n}{crypto\PYZus{}cipher\PYZus{}blocksize}\PY{p}{(}\PY{n}{tfm}\PY{p}{)}\PY{p}{)} \PY{p}{\PYZob{}}
+			\PY{n}{memset}\PY{p}{(}\PY{n}{dev}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{data} \PY{o}{+} \PY{n}{offset} \PY{o}{+} \PY{n}{i}\PY{p}{,} \PY{l+m+mi}{0}\PY{p}{,}
+				   \PY{n}{crypto\PYZus{}cipher\PYZus{}blocksize}\PY{p}{(}\PY{n}{tfm}\PY{p}{)}\PY{p}{)}\PY{p}{;}
+			\PY{n}{crypto\PYZus{}cipher\PYZus{}encrypt\PYZus{}one}\PY{p}{(}\PY{n}{tfm}\PY{p}{,} \PY{n}{dev}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{data} \PY{o}{+} \PY{n}{offset} \PY{o}{+} \PY{n}{i}\PY{p}{,}
+						  \PY{n}{buffer} \PY{o}{+} \PY{n}{i}\PY{p}{)}\PY{p}{;}
+		\PY{p}{\PYZcb{}}
+
+		\PY{k}{if} \PY{p}{(}\PY{n}{nbytes} \PY{o}{\PYZgt{}} \PY{l+m+mi}{3}\PY{p}{)}
+			\PY{n}{printk}\PY{p}{(}\PY{l+s}{\PYZdq{}}\PY{l+s}{Encrypted data: \PYZpc{}x\PYZpc{}x\PYZpc{}x}\PY{l+s+se}{\PYZbs{}n}\PY{l+s}{\PYZdq{}}\PY{p}{,} \PY{p}{(}\PY{n}{dev}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{data} \PY{o}{+} \PY{n}{offset}\PY{p}{)}\PY{p}{[}\PY{l+m+mi}{0}\PY{p}{]}\PY{p}{,} \PY{p}{(}\PY{n}{dev}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{data} \PY{o}{+} \PY{n}{offset}\PY{p}{)}\PY{p}{[}\PY{l+m+mi}{1}\PY{p}{]}\PY{p}{,} \PY{p}{(}\PY{n}{dev}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{data} \PY{o}{+} \PY{n}{offset}\PY{p}{)}\PY{p}{[}\PY{l+m+mi}{2}\PY{p}{]}\PY{p}{)}\PY{p}{;}
+	\PY{p}{\PYZcb{}} \PY{k}{else} \PY{p}{\PYZob{}}
+		\PY{n}{printk}\PY{p}{(}\PY{l+s}{\PYZdq{}}\PY{l+s}{Reading from memdiskblk \PYZhy{}\PYZhy{}}\PY{l+s+se}{\PYZbs{}n}\PY{l+s}{\PYZdq{}}\PY{p}{)}\PY{p}{;}
+		\PY{k}{if} \PY{p}{(}\PY{n}{nbytes} \PY{o}{\PYZgt{}} \PY{l+m+mi}{3}\PY{p}{)}
+			\PY{n}{printk}\PY{p}{(}\PY{l+s}{\PYZdq{}}\PY{l+s}{Encrypted data: \PYZpc{}x\PYZpc{}x\PYZpc{}x}\PY{l+s+se}{\PYZbs{}n}\PY{l+s}{\PYZdq{}}\PY{p}{,} \PY{p}{(}\PY{n}{buffer}\PY{p}{)}\PY{p}{[}\PY{l+m+mi}{0}\PY{p}{]}\PY{p}{,} \PY{p}{(}\PY{n}{buffer}\PY{p}{)}\PY{p}{[}\PY{l+m+mi}{1}\PY{p}{]}\PY{p}{,} \PY{p}{(}\PY{n}{buffer}\PY{p}{)}\PY{p}{[}\PY{l+m+mi}{2}\PY{p}{]}\PY{p}{)}\PY{p}{;}
+		\PY{k}{for} \PY{p}{(}\PY{n}{i} \PY{o}{=} \PY{l+m+mi}{0}\PY{p}{;} \PY{n}{i} \PY{o}{\PYZlt{}} \PY{n}{nbytes}\PY{p}{;} \PY{n}{i} \PY{o}{+}\PY{o}{=} \PY{n}{crypto\PYZus{}cipher\PYZus{}blocksize}\PY{p}{(}\PY{n}{tfm}\PY{p}{)}\PY{p}{)} \PY{p}{\PYZob{}}
+			\PY{n}{crypto\PYZus{}cipher\PYZus{}decrypt\PYZus{}one}\PY{p}{(}\PY{n}{tfm}\PY{p}{,} \PY{n}{buffer} \PY{o}{+} \PY{n}{i}\PY{p}{,}
+						  \PY{n}{dev}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{data} \PY{o}{+} \PY{n}{offset} \PY{o}{+} \PY{n}{i}\PY{p}{)}\PY{p}{;}
+		\PY{p}{\PYZcb{}}
+		\PY{k}{if} \PY{p}{(}\PY{n}{nbytes} \PY{o}{\PYZgt{}} \PY{l+m+mi}{3}\PY{p}{)}
+			\PY{n}{printk}\PY{p}{(}\PY{l+s}{\PYZdq{}}\PY{l+s}{Decrypted data: \PYZpc{}x\PYZpc{}x\PYZpc{}x}\PY{l+s+se}{\PYZbs{}n}\PY{l+s}{\PYZdq{}}\PY{p}{,} \PY{p}{(}\PY{n}{dev}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{data} \PY{o}{+} \PY{n}{offset}\PY{p}{)}\PY{p}{[}\PY{l+m+mi}{0}\PY{p}{]}\PY{p}{,} \PY{p}{(}\PY{n}{dev}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{data} \PY{o}{+} \PY{n}{offset}\PY{p}{)}\PY{p}{[}\PY{l+m+mi}{1}\PY{p}{]}\PY{p}{,} \PY{p}{(}\PY{n}{dev}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{data} \PY{o}{+} \PY{n}{offset}\PY{p}{)}\PY{p}{[}\PY{l+m+mi}{2}\PY{p}{]}\PY{p}{)}\PY{p}{;}
+	\PY{p}{\PYZcb{}}
+\PY{p}{\PYZcb{}}
+
+\PY{k}{static} \PY{k+kt}{void} \PY{n+nf}{memdiskblk\PYZus{}request}\PY{p}{(}\PY{k}{struct} \PY{n}{request\PYZus{}queue} \PY{o}{*}\PY{n}{q}\PY{p}{)}
+\PY{p}{\PYZob{}}
+	\PY{k}{struct} \PY{n}{request} \PY{o}{*}\PY{n}{req}\PY{p}{;}
+
+	\PY{n}{req} \PY{o}{=} \PY{n}{blk\PYZus{}fetch\PYZus{}request}\PY{p}{(}\PY{n}{q}\PY{p}{)}\PY{p}{;}
+	\PY{k}{while} \PY{p}{(}\PY{n}{req} \PY{o}{!}\PY{o}{=} \PY{n+nb}{NULL}\PY{p}{)} \PY{p}{\PYZob{}}
+		\PY{k}{if} \PY{p}{(}\PY{n}{req} \PY{o}{=}\PY{o}{=} \PY{n+nb}{NULL} \PY{o}{|}\PY{o}{|} \PY{p}{(}\PY{n}{req}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{cmd\PYZus{}type} \PY{o}{!}\PY{o}{=} \PY{n}{REQ\PYZus{}TYPE\PYZus{}FS}\PY{p}{)}\PY{p}{)} \PY{p}{\PYZob{}}
+			\PY{n}{printk}\PY{p}{(}\PY{n}{KERN\PYZus{}NOTICE} \PY{l+s}{\PYZdq{}}\PY{l+s}{Skip non\PYZhy{}CMD request}\PY{l+s+se}{\PYZbs{}n}\PY{l+s}{\PYZdq{}}\PY{p}{)}\PY{p}{;}
+			\PY{n}{\PYZus{}\PYZus{}blk\PYZus{}end\PYZus{}request\PYZus{}all}\PY{p}{(}\PY{n}{req}\PY{p}{,} \PY{o}{\PYZhy{}}\PY{n}{EIO}\PY{p}{)}\PY{p}{;}
+			\PY{k}{continue}\PY{p}{;}
+		\PY{p}{\PYZcb{}}
+		\PY{n}{memdiskblk\PYZus{}transfer}\PY{p}{(}\PY{o}{\PYZam{}}\PY{n}{Device}\PY{p}{,} \PY{n}{blk\PYZus{}rq\PYZus{}pos}\PY{p}{(}\PY{n}{req}\PY{p}{)}\PY{p}{,}
+				    \PY{n}{blk\PYZus{}rq\PYZus{}cur\PYZus{}sectors}\PY{p}{(}\PY{n}{req}\PY{p}{)}\PY{p}{,} \PY{n}{req}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{buffer}\PY{p}{,}
+				    \PY{n}{rq\PYZus{}data\PYZus{}dir}\PY{p}{(}\PY{n}{req}\PY{p}{)}\PY{p}{)}\PY{p}{;}
+		\PY{k}{if} \PY{p}{(}\PY{o}{!}\PY{n}{\PYZus{}\PYZus{}blk\PYZus{}end\PYZus{}request\PYZus{}cur}\PY{p}{(}\PY{n}{req}\PY{p}{,} \PY{l+m+mi}{0}\PY{p}{)}\PY{p}{)} \PY{p}{\PYZob{}}
+			\PY{n}{req} \PY{o}{=} \PY{n}{blk\PYZus{}fetch\PYZus{}request}\PY{p}{(}\PY{n}{q}\PY{p}{)}\PY{p}{;}
+		\PY{p}{\PYZcb{}}
+	\PY{p}{\PYZcb{}}
+\PY{p}{\PYZcb{}}
+
+\PY{k+kt}{int} \PY{n+nf}{memdiskblk\PYZus{}getgeo}\PY{p}{(}\PY{k}{struct} \PY{n}{block\PYZus{}device} \PY{o}{*}\PY{n}{block\PYZus{}device}\PY{p}{,}
+		      \PY{k}{struct} \PY{n}{hd\PYZus{}geometry} \PY{o}{*}\PY{n}{geo}\PY{p}{)}
+\PY{p}{\PYZob{}}
+	\PY{k+kt}{long} \PY{n}{size}\PY{p}{;}
+
+	\PY{n}{size} \PY{o}{=} \PY{n}{Device}\PY{p}{.}\PY{n}{size} \PY{o}{*} \PY{p}{(}\PY{n}{logical\PYZus{}block\PYZus{}size} \PY{o}{/} \PY{n}{KERNEL\PYZus{}SECTOR\PYZus{}SIZE}\PY{p}{)}\PY{p}{;}
+	\PY{n}{geo}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{cylinders} \PY{o}{=} \PY{p}{(}\PY{n}{size} \PY{o}{\PYZam{}} \PY{o}{\PYZti{}}\PY{l+m+mh}{0x3f}\PY{p}{)} \PY{o}{\PYZgt{}}\PY{o}{\PYZgt{}} \PY{l+m+mi}{6}\PY{p}{;}
+	\PY{n}{geo}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{heads} \PY{o}{=} \PY{l+m+mi}{4}\PY{p}{;}
+	\PY{n}{geo}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{sectors} \PY{o}{=} \PY{l+m+mi}{16}\PY{p}{;}
+	\PY{n}{geo}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{start} \PY{o}{=} \PY{l+m+mi}{0}\PY{p}{;}
+	\PY{k}{return} \PY{l+m+mi}{0}\PY{p}{;}
+\PY{p}{\PYZcb{}}
+
+\PY{k}{static} \PY{k}{struct} \PY{n}{block\PYZus{}device\PYZus{}operations} \PY{n}{memdiskblk\PYZus{}ops} \PY{o}{=} \PY{p}{\PYZob{}}
+	\PY{p}{.}\PY{n}{owner} \PY{o}{=} \PY{n}{THIS\PYZus{}MODULE}\PY{p}{,}
+	\PY{p}{.}\PY{n}{getgeo} \PY{o}{=} \PY{n}{memdiskblk\PYZus{}getgeo}
+\PY{p}{\PYZcb{}}\PY{p}{;}
+
+\PY{k}{static} \PY{k+kt}{int} \PY{n}{\PYZus{}\PYZus{}init} \PY{n+nf}{memdiskblk\PYZus{}init}\PY{p}{(}\PY{k+kt}{void}\PY{p}{)}
+\PY{p}{\PYZob{}}
+	\PY{n}{tfm} \PY{o}{=} \PY{n}{crypto\PYZus{}alloc\PYZus{}cipher}\PY{p}{(}\PY{l+s}{\PYZdq{}}\PY{l+s}{aes}\PY{l+s}{\PYZdq{}}\PY{p}{,} \PY{l+m+mi}{0}\PY{p}{,} \PY{l+m+mi}{0}\PY{p}{)}\PY{p}{;}
+	\PY{c+cm}{/* Error checking for crypto */}
+	\PY{k}{if} \PY{p}{(}\PY{n}{IS\PYZus{}ERR}\PY{p}{(}\PY{n}{tfm}\PY{p}{)}\PY{p}{)} \PY{p}{\PYZob{}}
+		\PY{n}{printk}\PY{p}{(}\PY{n}{KERN\PYZus{}ERR} \PY{l+s}{\PYZdq{}}\PY{l+s}{memdiskblk \PYZhy{}\PYZhy{} cipher allocation failed}\PY{l+s}{\PYZdq{}}\PY{p}{)}\PY{p}{;}
+		\PY{k}{return} \PY{n}{PTR\PYZus{}ERR}\PY{p}{(}\PY{n}{tfm}\PY{p}{)}\PY{p}{;}
+	\PY{p}{\PYZcb{}}
+
+	\PY{n}{Device}\PY{p}{.}\PY{n}{size} \PY{o}{=} \PY{n}{nsectors} \PY{o}{*} \PY{n}{logical\PYZus{}block\PYZus{}size}\PY{p}{;}
+	\PY{n}{spin\PYZus{}lock\PYZus{}init}\PY{p}{(}\PY{o}{\PYZam{}}\PY{n}{Device}\PY{p}{.}\PY{n}{lock}\PY{p}{)}\PY{p}{;}
+	\PY{n}{Device}\PY{p}{.}\PY{n}{data} \PY{o}{=} \PY{n}{vmalloc}\PY{p}{(}\PY{n}{Device}\PY{p}{.}\PY{n}{size}\PY{p}{)}\PY{p}{;}
+	\PY{k}{if} \PY{p}{(}\PY{n}{Device}\PY{p}{.}\PY{n}{data} \PY{o}{=}\PY{o}{=} \PY{n+nb}{NULL}\PY{p}{)}
+		\PY{k}{return} \PY{o}{\PYZhy{}}\PY{n}{ENOMEM}\PY{p}{;}
+
+	\PY{n}{Queue} \PY{o}{=} \PY{n}{blk\PYZus{}init\PYZus{}queue}\PY{p}{(}\PY{n}{memdiskblk\PYZus{}request}\PY{p}{,} \PY{o}{\PYZam{}}\PY{n}{Device}\PY{p}{.}\PY{n}{lock}\PY{p}{)}\PY{p}{;}
+	\PY{k}{if} \PY{p}{(}\PY{n}{Queue} \PY{o}{=}\PY{o}{=} \PY{n+nb}{NULL}\PY{p}{)}
+		\PY{k}{goto} \PY{n}{out}\PY{p}{;}
+	\PY{n}{blk\PYZus{}queue\PYZus{}logical\PYZus{}block\PYZus{}size}\PY{p}{(}\PY{n}{Queue}\PY{p}{,} \PY{n}{logical\PYZus{}block\PYZus{}size}\PY{p}{)}\PY{p}{;}
+
+	\PY{n}{major\PYZus{}num} \PY{o}{=} \PY{n}{register\PYZus{}blkdev}\PY{p}{(}\PY{n}{major\PYZus{}num}\PY{p}{,} \PY{l+s}{\PYZdq{}}\PY{l+s}{memdiskblk}\PY{l+s}{\PYZdq{}}\PY{p}{)}\PY{p}{;}
+	\PY{k}{if} \PY{p}{(}\PY{n}{major\PYZus{}num} \PY{o}{\PYZlt{}} \PY{l+m+mi}{0}\PY{p}{)} \PY{p}{\PYZob{}}
+		\PY{n}{printk}\PY{p}{(}\PY{n}{KERN\PYZus{}WARNING} \PY{l+s}{\PYZdq{}}\PY{l+s}{memdiskblk: unable to get major number}\PY{l+s+se}{\PYZbs{}n}\PY{l+s}{\PYZdq{}}\PY{p}{)}\PY{p}{;}
+		\PY{k}{goto} \PY{n}{out}\PY{p}{;}
+	\PY{p}{\PYZcb{}}
+
+	\PY{n}{Device}\PY{p}{.}\PY{n}{gd} \PY{o}{=} \PY{n}{alloc\PYZus{}disk}\PY{p}{(}\PY{l+m+mi}{16}\PY{p}{)}\PY{p}{;}
+	\PY{k}{if} \PY{p}{(}\PY{o}{!}\PY{n}{Device}\PY{p}{.}\PY{n}{gd}\PY{p}{)}
+		\PY{k}{goto} \PY{n}{out\PYZus{}unregister}\PY{p}{;}
+	\PY{n}{Device}\PY{p}{.}\PY{n}{gd}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{major} \PY{o}{=} \PY{n}{major\PYZus{}num}\PY{p}{;}
+	\PY{n}{Device}\PY{p}{.}\PY{n}{gd}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{first\PYZus{}minor} \PY{o}{=} \PY{l+m+mi}{0}\PY{p}{;}
+	\PY{n}{Device}\PY{p}{.}\PY{n}{gd}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{fops} \PY{o}{=} \PY{o}{\PYZam{}}\PY{n}{memdiskblk\PYZus{}ops}\PY{p}{;}
+	\PY{n}{Device}\PY{p}{.}\PY{n}{gd}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{private\PYZus{}data} \PY{o}{=} \PY{o}{\PYZam{}}\PY{n}{Device}\PY{p}{;}
+	\PY{n}{strcpy}\PY{p}{(}\PY{n}{Device}\PY{p}{.}\PY{n}{gd}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{disk\PYZus{}name}\PY{p}{,} \PY{l+s}{\PYZdq{}}\PY{l+s}{memdiskblk0}\PY{l+s}{\PYZdq{}}\PY{p}{)}\PY{p}{;}
+	\PY{n}{set\PYZus{}capacity}\PY{p}{(}\PY{n}{Device}\PY{p}{.}\PY{n}{gd}\PY{p}{,} \PY{n}{nsectors}\PY{p}{)}\PY{p}{;}
+	\PY{n}{Device}\PY{p}{.}\PY{n}{gd}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{queue} \PY{o}{=} \PY{n}{Queue}\PY{p}{;}
+	\PY{n}{add\PYZus{}disk}\PY{p}{(}\PY{n}{Device}\PY{p}{.}\PY{n}{gd}\PY{p}{)}\PY{p}{;}
+
+	\PY{k}{return} \PY{l+m+mi}{0}\PY{p}{;}
+
+ \PY{n+nl}{out\PYZus{}unregister}\PY{p}{:}
+	\PY{n}{unregister\PYZus{}blkdev}\PY{p}{(}\PY{n}{major\PYZus{}num}\PY{p}{,} \PY{l+s}{\PYZdq{}}\PY{l+s}{memdiskblk}\PY{l+s}{\PYZdq{}}\PY{p}{)}\PY{p}{;}
+ \PY{n+nl}{out}\PY{p}{:}
+	\PY{n}{crypto\PYZus{}free\PYZus{}cipher}\PY{p}{(}\PY{n}{tfm}\PY{p}{)}\PY{p}{;}
+	\PY{n}{vfree}\PY{p}{(}\PY{n}{Device}\PY{p}{.}\PY{n}{data}\PY{p}{)}\PY{p}{;}
+	\PY{k}{return} \PY{o}{\PYZhy{}}\PY{n}{ENOMEM}\PY{p}{;}
+\PY{p}{\PYZcb{}}
+
+\PY{k}{static} \PY{k+kt}{void} \PY{n}{\PYZus{}\PYZus{}exit} \PY{n+nf}{memdiskblk\PYZus{}exit}\PY{p}{(}\PY{k+kt}{void}\PY{p}{)}
+\PY{p}{\PYZob{}}
+	\PY{n}{del\PYZus{}gendisk}\PY{p}{(}\PY{n}{Device}\PY{p}{.}\PY{n}{gd}\PY{p}{)}\PY{p}{;}
+	\PY{n}{put\PYZus{}disk}\PY{p}{(}\PY{n}{Device}\PY{p}{.}\PY{n}{gd}\PY{p}{)}\PY{p}{;}
+	\PY{n}{unregister\PYZus{}blkdev}\PY{p}{(}\PY{n}{major\PYZus{}num}\PY{p}{,} \PY{l+s}{\PYZdq{}}\PY{l+s}{memdiskblk}\PY{l+s}{\PYZdq{}}\PY{p}{)}\PY{p}{;}
+	\PY{n}{blk\PYZus{}cleanup\PYZus{}queue}\PY{p}{(}\PY{n}{Queue}\PY{p}{)}\PY{p}{;}
+	\PY{n}{vfree}\PY{p}{(}\PY{n}{Device}\PY{p}{.}\PY{n}{data}\PY{p}{)}\PY{p}{;}
+\PY{p}{\PYZcb{}}
+
+\PY{n}{module\PYZus{}init}\PY{p}{(}\PY{n}{memdiskblk\PYZus{}init}\PY{p}{)}\PY{p}{;}
+\PY{n}{module\PYZus{}exit}\PY{p}{(}\PY{n}{memdiskblk\PYZus{}exit}\PY{p}{)}\PY{p}{;}
+\end{Verbatim}

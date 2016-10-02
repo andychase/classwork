@@ -1,0 +1,163 @@
+diff --git a/frag.py b/frag.py
+new file mode 100644
+index 0000000..33e47ab
+--- /dev/null
++++ b/frag.py
+@@ -0,0 +1,32 @@
++#!/usr/bin/python
++import sys
++
++mult_list = [
++ 4,
++ 8,
++ 16,
++ 32,
++ 64,
++ 128,
++ 256,
++ 512,
++ 1024,
++ 2048,
++ 4096
++]
++
++example_data = "Node 0, zone   Normal     75     51     57     16      2      0      0      1      1      2     72"
++example_data_2 = "Normal    272    144     80     50     33     13      2      1      2      1     71 "
++
++def get_number_list(input_string):
++	return (int(i) for i in input_string.split("zone   Normal")[1].split())
++
++def get_fragmentation(input_blocks):
++	return (sum(input_blocks) - input_blocks[-1]) / float(sum(input_blocks))
++
++def size_blocks(number_list):
++	for block, size in zip(number_list, mult_list):
++		yield block*size
++
++data = open("/proc/buddyinfo", "r").read()
++print(get_fragmentation(list(size_blocks(get_number_list(data)))))
+diff --git a/mm/slob.c b/mm/slob.c
+index 4bf8809..45d4232 100644
+--- a/mm/slob.c
++++ b/mm/slob.c
+@@ -214,10 +214,11 @@ static void slob_free_pages(void *b, int order)
+ /*
+  * Allocate a slob block within a given slob_page sp.
+  */
+-static void *slob_page_alloc(struct page *sp, size_t size, int align)
++static void *slob_page_alloc(struct page *sp, size_t size, int align, int apply, int *best_fit)
+ {
+ 	slob_t *prev, *cur, *aligned = NULL;
+ 	int delta = 0, units = SLOB_UNITS(size);
++	int fits;
+ 
+ 	for (prev = NULL, cur = sp->freelist; ; prev = cur, cur = slob_next(cur)) {
+ 		slobidx_t avail = slob_units(cur);
+@@ -226,7 +227,12 @@ static void *slob_page_alloc(struct page *sp, size_t size, int align)
+ 			aligned = (slob_t *)ALIGN((unsigned long)cur, align);
+ 			delta = aligned - cur;
+ 		}
+-		if (avail >= units + delta) { /* room enough? */
++		fits = avail >= units + delta;
++		if (!apply && fits && (!*best_fit || (avail - units + delta < *best_fit))) { /* room enough? */
++			*best_fit = avail - units + delta;
++		}
++
++		if (apply && fits && (!*best_fit || avail - units + delta == *best_fit)) { /* room enough? */
+ 			slob_t *next;
+ 
+ 			if (delta) { /* need to fragment head to align? */
+@@ -272,6 +278,8 @@ static void *slob_alloc(size_t size, gfp_t gfp, int align, int node)
+ 	struct list_head *slob_list;
+ 	slob_t *b = NULL;
+ 	unsigned long flags;
++	int best_fit = 0;
++	int apply;
+ 
+ 	if (size < SLOB_BREAK1)
+ 		slob_list = &free_slob_small;
+@@ -282,32 +290,27 @@ static void *slob_alloc(size_t size, gfp_t gfp, int align, int node)
+ 
+ 	spin_lock_irqsave(&slob_lock, flags);
+ 	/* Iterate through each partially free page, try to find room */
+-	list_for_each_entry(sp, slob_list, list) {
+-#ifdef CONFIG_NUMA
+-		/*
+-		 * If there's a node specification, search for a partial
+-		 * page with a matching node id in the freelist.
+-		 */
+-		if (node != NUMA_NO_NODE && page_to_nid(sp) != node)
+-			continue;
+-#endif
+-		/* Enough room on this page? */
+-		if (sp->units < SLOB_UNITS(size))
+-			continue;
+-
+-		/* Attempt to alloc */
+-		prev = sp->list.prev;
+-		b = slob_page_alloc(sp, size, align);
+-		if (!b)
+-			continue;
+-
+-		/* Improve fragment distribution and reduce our average
+-		 * search time by starting our next search here. (see
+-		 * Knuth vol 1, sec 2.5, pg 449) */
+-		if (prev != slob_list->prev &&
+-				slob_list->next != prev->next)
+-			list_move_tail(slob_list, prev->next);
+-		break;
++	for(apply = 0; apply <= 1; apply++) {
++		list_for_each_entry(sp, slob_list, list) {
++	#ifdef CONFIG_NUMA
++			/*
++			 * If there's a node specification, search for a partial
++			 * page with a matching node id in the freelist.
++			 */
++			if (node != NUMA_NO_NODE && page_to_nid(sp) != node)
++				continue;
++	#endif
++			/* Enough room on this page? */
++			if (sp->units < SLOB_UNITS(size))
++				continue;
++
++			/* Attempt to alloc */
++			prev = sp->list.prev;
++			b = slob_page_alloc(sp, size, align, apply, &best_fit);
++			if (!b)
++				continue;
++			break;
++		}
+ 	}
+ 	spin_unlock_irqrestore(&slob_lock, flags);
+ 
+@@ -325,7 +328,9 @@ static void *slob_alloc(size_t size, gfp_t gfp, int align, int node)
+ 		INIT_LIST_HEAD(&sp->list);
+ 		set_slob(b, SLOB_UNITS(PAGE_SIZE), b + SLOB_UNITS(PAGE_SIZE));
+ 		set_slob_page_free(sp, slob_list);
+-		b = slob_page_alloc(sp, size, align);
++		best_fit = 0;
++		apply = 1;
++		b = slob_page_alloc(sp, size, align, apply, &best_fit);
+ 		BUG_ON(!b);
+ 		spin_unlock_irqrestore(&slob_lock, flags);
+ 	}
+diff --git a/plan.md b/plan.md
+new file mode 100644
+index 0000000..a29ba83
+--- /dev/null
++++ b/plan.md
+@@ -0,0 +1,14 @@
++Andy Chase
++Homework 5
++
++
++References:
++
++* https://github.com/fusion2004/cop4610/blob/master/lab3/slob.c
++
++
++The algorithm I plan to use:
++
++* Make a data structure indicating the best fits
++* Modying slob_alloc to loop through all pages instead of short circuting at the first page
++* Modify slob_page_alloc to output the fit and location of each selection

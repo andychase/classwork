@@ -28,7 +28,7 @@ def trace_unhandled_exceptions(func):
         try:
             func(*args, **kwargs)
         except:
-            print 'Exception in ' + func.__name__
+            print('Exception in ' + func.__name__)
             traceback.print_exc()
 
     return wrapped_func
@@ -38,7 +38,7 @@ agentSem = multiprocessing.Semaphore(1)
 tobacco = multiprocessing.Semaphore(0)
 paper = multiprocessing.Semaphore(0)
 match = multiprocessing.Semaphore(0)
-q = multiprocessing.Queue()
+q = multiprocessing.Queue(1)
 
 
 def make_cigarette(smoker, has_message):
@@ -85,8 +85,6 @@ def smoker1():
             continue
         else:
             make_cigarette("smoker1", "match, acquired: paper, tobacco")
-            tobacco.release()
-            paper.release()
             agentSem.release()
             smoke()
 
@@ -100,8 +98,6 @@ def smoker2():
             continue
         else:
             make_cigarette("smoker2", "tobacco, acquired: match, paper")
-            paper.release()
-            match.release()
             agentSem.release()
             smoke()
 
@@ -115,8 +111,6 @@ def smoker3():
             continue
         else:
             make_cigarette("smoker3", "paper, acquired: tobacco, match")
-            tobacco.release()
-            match.release()
             agentSem.release()
             smoke()
 
