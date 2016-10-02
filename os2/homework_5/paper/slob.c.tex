@@ -1,0 +1,652 @@
+\begin{Verbatim}[commandchars=\\\{\},numbers=left,firstnumber=1,stepnumber=1]
+\PY{c+cm}{/*}
+\PY{c+cm}{ * SLOB Allocator: Simple List Of Blocks}
+\PY{c+cm}{ *}
+\PY{c+cm}{ * Matt Mackall \PYZlt{}mpm@selenic.com\PYZgt{} 12/30/03}
+\PY{c+cm}{ *}
+\PY{c+cm}{ * NUMA support by Paul Mundt, 2007.}
+\PY{c+cm}{ *}
+\PY{c+cm}{ * How SLOB works:}
+\PY{c+cm}{ *}
+\PY{c+cm}{ * The core of SLOB is a traditional K\PYZam{}R style heap allocator, with}
+\PY{c+cm}{ * support for returning aligned objects. The granularity of this}
+\PY{c+cm}{ * allocator is as little as 2 bytes, however typically most architectures}
+\PY{c+cm}{ * will require 4 bytes on 32\PYZhy{}bit and 8 bytes on 64\PYZhy{}bit.}
+\PY{c+cm}{ *}
+\PY{c+cm}{ * The slob heap is a set of linked list of pages from alloc\PYZus{}pages(),}
+\PY{c+cm}{ * and within each page, there is a singly\PYZhy{}linked list of free blocks}
+\PY{c+cm}{ * (slob\PYZus{}t). The heap is grown on demand. To reduce fragmentation,}
+\PY{c+cm}{ * heap pages are segregated into three lists, with objects less than}
+\PY{c+cm}{ * 256 bytes, objects less than 1024 bytes, and all other objects.}
+\PY{c+cm}{ *}
+\PY{c+cm}{ * Allocation from heap involves first searching for a page with}
+\PY{c+cm}{ * sufficient free blocks (using a next\PYZhy{}fit\PYZhy{}like approach) followed by}
+\PY{c+cm}{ * a first\PYZhy{}fit scan of the page. Deallocation inserts objects back}
+\PY{c+cm}{ * into the free list in address order, so this is effectively an}
+\PY{c+cm}{ * address\PYZhy{}ordered first fit.}
+\PY{c+cm}{ *}
+\PY{c+cm}{ * Above this is an implementation of kmalloc/kfree. Blocks returned}
+\PY{c+cm}{ * from kmalloc are prepended with a 4\PYZhy{}byte header with the kmalloc size.}
+\PY{c+cm}{ * If kmalloc is asked for objects of PAGE\PYZus{}SIZE or larger, it calls}
+\PY{c+cm}{ * alloc\PYZus{}pages() directly, allocating compound pages so the page order}
+\PY{c+cm}{ * does not have to be separately tracked.}
+\PY{c+cm}{ * These objects are detected in kfree() because PageSlab()}
+\PY{c+cm}{ * is false for them.}
+\PY{c+cm}{ *}
+\PY{c+cm}{ * SLAB is emulated on top of SLOB by simply calling constructors and}
+\PY{c+cm}{ * destructors for every SLAB allocation. Objects are returned with the}
+\PY{c+cm}{ * 4\PYZhy{}byte alignment unless the SLAB\PYZus{}HWCACHE\PYZus{}ALIGN flag is set, in which}
+\PY{c+cm}{ * case the low\PYZhy{}level allocator will fragment blocks to create the proper}
+\PY{c+cm}{ * alignment. Again, objects of page\PYZhy{}size or greater are allocated by}
+\PY{c+cm}{ * calling alloc\PYZus{}pages(). As SLAB objects know their size, no separate}
+\PY{c+cm}{ * size bookkeeping is necessary and there is essentially no allocation}
+\PY{c+cm}{ * space overhead, and compound pages aren\PYZsq{}t needed for multi\PYZhy{}page}
+\PY{c+cm}{ * allocations.}
+\PY{c+cm}{ *}
+\PY{c+cm}{ * NUMA support in SLOB is fairly simplistic, pushing most of the real}
+\PY{c+cm}{ * logic down to the page allocator, and simply doing the node accounting}
+\PY{c+cm}{ * on the upper levels. In the event that a node id is explicitly}
+\PY{c+cm}{ * provided, alloc\PYZus{}pages\PYZus{}exact\PYZus{}node() with the specified node id is used}
+\PY{c+cm}{ * instead. The common case (or when the node id isn\PYZsq{}t explicitly provided)}
+\PY{c+cm}{ * will default to the current node, as per numa\PYZus{}node\PYZus{}id().}
+\PY{c+cm}{ *}
+\PY{c+cm}{ * Node aware pages are still inserted in to the global freelist, and}
+\PY{c+cm}{ * these are scanned for by matching against the node id encoded in the}
+\PY{c+cm}{ * page flags. As a result, block allocations that can be satisfied from}
+\PY{c+cm}{ * the freelist will only be done so on pages residing on the same node,}
+\PY{c+cm}{ * in order to prevent random node placement.}
+\PY{c+cm}{ */}
+
+\PY{c+cp}{\PYZsh{}}\PY{c+cp}{include \PYZlt{}linux}\PY{c+cp}{/}\PY{c+cp}{kernel.h\PYZgt{}}
+\PY{c+cp}{\PYZsh{}}\PY{c+cp}{include \PYZlt{}linux}\PY{c+cp}{/}\PY{c+cp}{slab.h\PYZgt{}}
+
+\PY{c+cp}{\PYZsh{}}\PY{c+cp}{include \PYZlt{}linux}\PY{c+cp}{/}\PY{c+cp}{mm.h\PYZgt{}}
+\PY{c+cp}{\PYZsh{}}\PY{c+cp}{include \PYZlt{}linux}\PY{c+cp}{/}\PY{c+cp}{swap.h\PYZgt{} }\PY{c+cm}{/* struct reclaim\PYZus{}state */}
+\PY{c+cp}{\PYZsh{}}\PY{c+cp}{include \PYZlt{}linux}\PY{c+cp}{/}\PY{c+cp}{cache.h\PYZgt{}}
+\PY{c+cp}{\PYZsh{}}\PY{c+cp}{include \PYZlt{}linux}\PY{c+cp}{/}\PY{c+cp}{init.h\PYZgt{}}
+\PY{c+cp}{\PYZsh{}}\PY{c+cp}{include \PYZlt{}linux}\PY{c+cp}{/}\PY{c+cp}{export.h\PYZgt{}}
+\PY{c+cp}{\PYZsh{}}\PY{c+cp}{include \PYZlt{}linux}\PY{c+cp}{/}\PY{c+cp}{rcupdate.h\PYZgt{}}
+\PY{c+cp}{\PYZsh{}}\PY{c+cp}{include \PYZlt{}linux}\PY{c+cp}{/}\PY{c+cp}{list.h\PYZgt{}}
+\PY{c+cp}{\PYZsh{}}\PY{c+cp}{include \PYZlt{}linux}\PY{c+cp}{/}\PY{c+cp}{kmemleak.h\PYZgt{}}
+
+\PY{c+cp}{\PYZsh{}}\PY{c+cp}{include \PYZlt{}trace}\PY{c+cp}{/}\PY{c+cp}{events}\PY{c+cp}{/}\PY{c+cp}{kmem.h\PYZgt{}}
+
+\PY{c+cp}{\PYZsh{}}\PY{c+cp}{include \PYZlt{}linux}\PY{c+cp}{/}\PY{c+cp}{atomic.h\PYZgt{}}
+
+\PY{c+cp}{\PYZsh{}}\PY{c+cp}{include \PYZdq{}slab.h\PYZdq{}}
+\PY{c+cm}{/*}
+\PY{c+cm}{ * slob\PYZus{}block has a field \PYZsq{}units\PYZsq{}, which indicates size of block if +ve,}
+\PY{c+cm}{ * or offset of next block if \PYZhy{}ve (in SLOB\PYZus{}UNITs).}
+\PY{c+cm}{ *}
+\PY{c+cm}{ * Free blocks of size 1 unit simply contain the offset of the next block.}
+\PY{c+cm}{ * Those with larger size contain their size in the first SLOB\PYZus{}UNIT of}
+\PY{c+cm}{ * memory, and the offset of the next free block in the second SLOB\PYZus{}UNIT.}
+\PY{c+cm}{ */}
+\PY{c+cp}{\PYZsh{}}\PY{c+cp}{if PAGE\PYZus{}SIZE \PYZlt{}= (32767 * 2)}
+\PY{k}{typedef} \PY{n}{s16} \PY{k+kt}{slobidx\PYZus{}t}\PY{p}{;}
+\PY{c+cp}{\PYZsh{}}\PY{c+cp}{else}
+\PY{k}{typedef} \PY{n}{s32} \PY{k+kt}{slobidx\PYZus{}t}\PY{p}{;}
+\PY{c+cp}{\PYZsh{}}\PY{c+cp}{endif}
+
+\PY{k}{struct} \PY{n}{slob\PYZus{}block} \PY{p}{\PYZob{}}
+	\PY{k+kt}{slobidx\PYZus{}t} \PY{n}{units}\PY{p}{;}
+\PY{p}{\PYZcb{}}\PY{p}{;}
+\PY{k}{typedef} \PY{k}{struct} \PY{n}{slob\PYZus{}block} \PY{k+kt}{slob\PYZus{}t}\PY{p}{;}
+
+\PY{c+cm}{/*}
+\PY{c+cm}{ * All partially free slob pages go on these lists.}
+\PY{c+cm}{ */}
+\PY{c+cp}{\PYZsh{}}\PY{c+cp}{define SLOB\PYZus{}BREAK1 256}
+\PY{c+cp}{\PYZsh{}}\PY{c+cp}{define SLOB\PYZus{}BREAK2 1024}
+\PY{k}{static} \PY{n+nf}{LIST\PYZus{}HEAD}\PY{p}{(}\PY{n}{free\PYZus{}slob\PYZus{}small}\PY{p}{)}\PY{p}{;}
+\PY{k}{static} \PY{n+nf}{LIST\PYZus{}HEAD}\PY{p}{(}\PY{n}{free\PYZus{}slob\PYZus{}medium}\PY{p}{)}\PY{p}{;}
+\PY{k}{static} \PY{n+nf}{LIST\PYZus{}HEAD}\PY{p}{(}\PY{n}{free\PYZus{}slob\PYZus{}large}\PY{p}{)}\PY{p}{;}
+
+\PY{c+cm}{/*}
+\PY{c+cm}{ * slob\PYZus{}page\PYZus{}free: true for pages on free\PYZus{}slob\PYZus{}pages list.}
+\PY{c+cm}{ */}
+\PY{k}{static} \PY{k+kr}{inline} \PY{k+kt}{int} \PY{n+nf}{slob\PYZus{}page\PYZus{}free}\PY{p}{(}\PY{k}{struct} \PY{n}{page} \PY{o}{*}\PY{n}{sp}\PY{p}{)}
+\PY{p}{\PYZob{}}
+	\PY{k}{return} \PY{n}{PageSlobFree}\PY{p}{(}\PY{n}{sp}\PY{p}{)}\PY{p}{;}
+\PY{p}{\PYZcb{}}
+
+\PY{k}{static} \PY{k+kt}{void} \PY{n+nf}{set\PYZus{}slob\PYZus{}page\PYZus{}free}\PY{p}{(}\PY{k}{struct} \PY{n}{page} \PY{o}{*}\PY{n}{sp}\PY{p}{,} \PY{k}{struct} \PY{n}{list\PYZus{}head} \PY{o}{*}\PY{n}{list}\PY{p}{)}
+\PY{p}{\PYZob{}}
+	\PY{n}{list\PYZus{}add}\PY{p}{(}\PY{o}{\PYZam{}}\PY{n}{sp}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{list}\PY{p}{,} \PY{n}{list}\PY{p}{)}\PY{p}{;}
+	\PY{n}{\PYZus{}\PYZus{}SetPageSlobFree}\PY{p}{(}\PY{n}{sp}\PY{p}{)}\PY{p}{;}
+\PY{p}{\PYZcb{}}
+
+\PY{k}{static} \PY{k+kr}{inline} \PY{k+kt}{void} \PY{n+nf}{clear\PYZus{}slob\PYZus{}page\PYZus{}free}\PY{p}{(}\PY{k}{struct} \PY{n}{page} \PY{o}{*}\PY{n}{sp}\PY{p}{)}
+\PY{p}{\PYZob{}}
+	\PY{n}{list\PYZus{}del}\PY{p}{(}\PY{o}{\PYZam{}}\PY{n}{sp}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{list}\PY{p}{)}\PY{p}{;}
+	\PY{n}{\PYZus{}\PYZus{}ClearPageSlobFree}\PY{p}{(}\PY{n}{sp}\PY{p}{)}\PY{p}{;}
+\PY{p}{\PYZcb{}}
+
+\PY{c+cp}{\PYZsh{}}\PY{c+cp}{define SLOB\PYZus{}UNIT sizeof(slob\PYZus{}t)}
+\PY{c+cp}{\PYZsh{}}\PY{c+cp}{define SLOB\PYZus{}UNITS(size) DIV\PYZus{}ROUND\PYZus{}UP(size, SLOB\PYZus{}UNIT)}
+
+\PY{c+cm}{/*}
+\PY{c+cm}{ * struct slob\PYZus{}rcu is inserted at the tail of allocated slob blocks, which}
+\PY{c+cm}{ * were created with a SLAB\PYZus{}DESTROY\PYZus{}BY\PYZus{}RCU slab. slob\PYZus{}rcu is used to free}
+\PY{c+cm}{ * the block using call\PYZus{}rcu.}
+\PY{c+cm}{ */}
+\PY{k}{struct} \PY{n}{slob\PYZus{}rcu} \PY{p}{\PYZob{}}
+	\PY{k}{struct} \PY{n}{rcu\PYZus{}head} \PY{n}{head}\PY{p}{;}
+	\PY{k+kt}{int} \PY{n}{size}\PY{p}{;}
+\PY{p}{\PYZcb{}}\PY{p}{;}
+
+\PY{c+cm}{/*}
+\PY{c+cm}{ * slob\PYZus{}lock protects all slob allocator structures.}
+\PY{c+cm}{ */}
+\PY{k}{static} \PY{n+nf}{DEFINE\PYZus{}SPINLOCK}\PY{p}{(}\PY{n}{slob\PYZus{}lock}\PY{p}{)}\PY{p}{;}
+
+\PY{c+cm}{/*}
+\PY{c+cm}{ * Encode the given size and next info into a free slob block s.}
+\PY{c+cm}{ */}
+\PY{k}{static} \PY{k+kt}{void} \PY{n+nf}{set\PYZus{}slob}\PY{p}{(}\PY{k+kt}{slob\PYZus{}t} \PY{o}{*}\PY{n}{s}\PY{p}{,} \PY{k+kt}{slobidx\PYZus{}t} \PY{n}{size}\PY{p}{,} \PY{k+kt}{slob\PYZus{}t} \PY{o}{*}\PY{n}{next}\PY{p}{)}
+\PY{p}{\PYZob{}}
+	\PY{k+kt}{slob\PYZus{}t} \PY{o}{*}\PY{n}{base} \PY{o}{=} \PY{p}{(}\PY{k+kt}{slob\PYZus{}t} \PY{o}{*}\PY{p}{)}\PY{p}{(}\PY{p}{(}\PY{k+kt}{unsigned} \PY{k+kt}{long}\PY{p}{)}\PY{n}{s} \PY{o}{\PYZam{}} \PY{n}{PAGE\PYZus{}MASK}\PY{p}{)}\PY{p}{;}
+	\PY{k+kt}{slobidx\PYZus{}t} \PY{n}{offset} \PY{o}{=} \PY{n}{next} \PY{o}{\PYZhy{}} \PY{n}{base}\PY{p}{;}
+
+	\PY{k}{if} \PY{p}{(}\PY{n}{size} \PY{o}{\PYZgt{}} \PY{l+m+mi}{1}\PY{p}{)} \PY{p}{\PYZob{}}
+		\PY{n}{s}\PY{p}{[}\PY{l+m+mi}{0}\PY{p}{]}\PY{p}{.}\PY{n}{units} \PY{o}{=} \PY{n}{size}\PY{p}{;}
+		\PY{n}{s}\PY{p}{[}\PY{l+m+mi}{1}\PY{p}{]}\PY{p}{.}\PY{n}{units} \PY{o}{=} \PY{n}{offset}\PY{p}{;}
+	\PY{p}{\PYZcb{}} \PY{k}{else}
+		\PY{n}{s}\PY{p}{[}\PY{l+m+mi}{0}\PY{p}{]}\PY{p}{.}\PY{n}{units} \PY{o}{=} \PY{o}{\PYZhy{}}\PY{n}{offset}\PY{p}{;}
+\PY{p}{\PYZcb{}}
+
+\PY{c+cm}{/*}
+\PY{c+cm}{ * Return the size of a slob block.}
+\PY{c+cm}{ */}
+\PY{k}{static} \PY{k+kt}{slobidx\PYZus{}t} \PY{n+nf}{slob\PYZus{}units}\PY{p}{(}\PY{k+kt}{slob\PYZus{}t} \PY{o}{*}\PY{n}{s}\PY{p}{)}
+\PY{p}{\PYZob{}}
+	\PY{k}{if} \PY{p}{(}\PY{n}{s}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{units} \PY{o}{\PYZgt{}} \PY{l+m+mi}{0}\PY{p}{)}
+		\PY{k}{return} \PY{n}{s}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{units}\PY{p}{;}
+	\PY{k}{return} \PY{l+m+mi}{1}\PY{p}{;}
+\PY{p}{\PYZcb{}}
+
+\PY{c+cm}{/*}
+\PY{c+cm}{ * Return the next free slob block pointer after this one.}
+\PY{c+cm}{ */}
+\PY{k}{static} \PY{k+kt}{slob\PYZus{}t} \PY{o}{*}\PY{n+nf}{slob\PYZus{}next}\PY{p}{(}\PY{k+kt}{slob\PYZus{}t} \PY{o}{*}\PY{n}{s}\PY{p}{)}
+\PY{p}{\PYZob{}}
+	\PY{k+kt}{slob\PYZus{}t} \PY{o}{*}\PY{n}{base} \PY{o}{=} \PY{p}{(}\PY{k+kt}{slob\PYZus{}t} \PY{o}{*}\PY{p}{)}\PY{p}{(}\PY{p}{(}\PY{k+kt}{unsigned} \PY{k+kt}{long}\PY{p}{)}\PY{n}{s} \PY{o}{\PYZam{}} \PY{n}{PAGE\PYZus{}MASK}\PY{p}{)}\PY{p}{;}
+	\PY{k+kt}{slobidx\PYZus{}t} \PY{n}{next}\PY{p}{;}
+
+	\PY{k}{if} \PY{p}{(}\PY{n}{s}\PY{p}{[}\PY{l+m+mi}{0}\PY{p}{]}\PY{p}{.}\PY{n}{units} \PY{o}{\PYZlt{}} \PY{l+m+mi}{0}\PY{p}{)}
+		\PY{n}{next} \PY{o}{=} \PY{o}{\PYZhy{}}\PY{n}{s}\PY{p}{[}\PY{l+m+mi}{0}\PY{p}{]}\PY{p}{.}\PY{n}{units}\PY{p}{;}
+	\PY{k}{else}
+		\PY{n}{next} \PY{o}{=} \PY{n}{s}\PY{p}{[}\PY{l+m+mi}{1}\PY{p}{]}\PY{p}{.}\PY{n}{units}\PY{p}{;}
+	\PY{k}{return} \PY{n}{base}\PY{o}{+}\PY{n}{next}\PY{p}{;}
+\PY{p}{\PYZcb{}}
+
+\PY{c+cm}{/*}
+\PY{c+cm}{ * Returns true if s is the last free block in its page.}
+\PY{c+cm}{ */}
+\PY{k}{static} \PY{k+kt}{int} \PY{n+nf}{slob\PYZus{}last}\PY{p}{(}\PY{k+kt}{slob\PYZus{}t} \PY{o}{*}\PY{n}{s}\PY{p}{)}
+\PY{p}{\PYZob{}}
+	\PY{k}{return} \PY{o}{!}\PY{p}{(}\PY{p}{(}\PY{k+kt}{unsigned} \PY{k+kt}{long}\PY{p}{)}\PY{n}{slob\PYZus{}next}\PY{p}{(}\PY{n}{s}\PY{p}{)} \PY{o}{\PYZam{}} \PY{o}{\PYZti{}}\PY{n}{PAGE\PYZus{}MASK}\PY{p}{)}\PY{p}{;}
+\PY{p}{\PYZcb{}}
+
+\PY{k}{static} \PY{k+kt}{void} \PY{o}{*}\PY{n+nf}{slob\PYZus{}new\PYZus{}pages}\PY{p}{(}\PY{k+kt}{gfp\PYZus{}t} \PY{n}{gfp}\PY{p}{,} \PY{k+kt}{int} \PY{n}{order}\PY{p}{,} \PY{k+kt}{int} \PY{n}{node}\PY{p}{)}
+\PY{p}{\PYZob{}}
+	\PY{k+kt}{void} \PY{o}{*}\PY{n}{page}\PY{p}{;}
+
+\PY{c+cp}{\PYZsh{}}\PY{c+cp}{ifdef CONFIG\PYZus{}NUMA}
+	\PY{k}{if} \PY{p}{(}\PY{n}{node} \PY{o}{!}\PY{o}{=} \PY{n}{NUMA\PYZus{}NO\PYZus{}NODE}\PY{p}{)}
+		\PY{n}{page} \PY{o}{=} \PY{n}{alloc\PYZus{}pages\PYZus{}exact\PYZus{}node}\PY{p}{(}\PY{n}{node}\PY{p}{,} \PY{n}{gfp}\PY{p}{,} \PY{n}{order}\PY{p}{)}\PY{p}{;}
+	\PY{k}{else}
+\PY{c+cp}{\PYZsh{}}\PY{c+cp}{endif}
+		\PY{n}{page} \PY{o}{=} \PY{n}{alloc\PYZus{}pages}\PY{p}{(}\PY{n}{gfp}\PY{p}{,} \PY{n}{order}\PY{p}{)}\PY{p}{;}
+
+	\PY{k}{if} \PY{p}{(}\PY{o}{!}\PY{n}{page}\PY{p}{)}
+		\PY{k}{return} \PY{n+nb}{NULL}\PY{p}{;}
+
+	\PY{k}{return} \PY{n}{page\PYZus{}address}\PY{p}{(}\PY{n}{page}\PY{p}{)}\PY{p}{;}
+\PY{p}{\PYZcb{}}
+
+\PY{k}{static} \PY{k+kt}{void} \PY{n+nf}{slob\PYZus{}free\PYZus{}pages}\PY{p}{(}\PY{k+kt}{void} \PY{o}{*}\PY{n}{b}\PY{p}{,} \PY{k+kt}{int} \PY{n}{order}\PY{p}{)}
+\PY{p}{\PYZob{}}
+	\PY{k}{if} \PY{p}{(}\PY{n}{current}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{reclaim\PYZus{}state}\PY{p}{)}
+		\PY{n}{current}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{reclaim\PYZus{}state}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{reclaimed\PYZus{}slab} \PY{o}{+}\PY{o}{=} \PY{l+m+mi}{1} \PY{o}{\PYZlt{}}\PY{o}{\PYZlt{}} \PY{n}{order}\PY{p}{;}
+	\PY{n}{free\PYZus{}pages}\PY{p}{(}\PY{p}{(}\PY{k+kt}{unsigned} \PY{k+kt}{long}\PY{p}{)}\PY{n}{b}\PY{p}{,} \PY{n}{order}\PY{p}{)}\PY{p}{;}
+\PY{p}{\PYZcb{}}
+
+\PY{c+cm}{/*}
+\PY{c+cm}{ * Allocate a slob block within a given slob\PYZus{}page sp.}
+\PY{c+cm}{ */}
+\PY{k}{static} \PY{k+kt}{void} \PY{o}{*}\PY{n+nf}{slob\PYZus{}page\PYZus{}alloc}\PY{p}{(}\PY{k}{struct} \PY{n}{page} \PY{o}{*}\PY{n}{sp}\PY{p}{,} \PY{k+kt}{size\PYZus{}t} \PY{n}{size}\PY{p}{,} \PY{k+kt}{int} \PY{n}{align}\PY{p}{,} \PY{k+kt}{int} \PY{n}{apply}\PY{p}{,} \PY{k+kt}{int} \PY{o}{*}\PY{n}{best\PYZus{}fit}\PY{p}{)}
+\PY{p}{\PYZob{}}
+	\PY{k+kt}{slob\PYZus{}t} \PY{o}{*}\PY{n}{prev}\PY{p}{,} \PY{o}{*}\PY{n}{cur}\PY{p}{,} \PY{o}{*}\PY{n}{aligned} \PY{o}{=} \PY{n+nb}{NULL}\PY{p}{;}
+	\PY{k+kt}{int} \PY{n}{delta} \PY{o}{=} \PY{l+m+mi}{0}\PY{p}{,} \PY{n}{units} \PY{o}{=} \PY{n}{SLOB\PYZus{}UNITS}\PY{p}{(}\PY{n}{size}\PY{p}{)}\PY{p}{;}
+	\PY{k+kt}{int} \PY{n}{fits}\PY{p}{;}
+
+	\PY{k}{for} \PY{p}{(}\PY{n}{prev} \PY{o}{=} \PY{n+nb}{NULL}\PY{p}{,} \PY{n}{cur} \PY{o}{=} \PY{n}{sp}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{freelist}\PY{p}{;} \PY{p}{;} \PY{n}{prev} \PY{o}{=} \PY{n}{cur}\PY{p}{,} \PY{n}{cur} \PY{o}{=} \PY{n}{slob\PYZus{}next}\PY{p}{(}\PY{n}{cur}\PY{p}{)}\PY{p}{)} \PY{p}{\PYZob{}}
+		\PY{k+kt}{slobidx\PYZus{}t} \PY{n}{avail} \PY{o}{=} \PY{n}{slob\PYZus{}units}\PY{p}{(}\PY{n}{cur}\PY{p}{)}\PY{p}{;}
+
+		\PY{k}{if} \PY{p}{(}\PY{n}{align}\PY{p}{)} \PY{p}{\PYZob{}}
+			\PY{n}{aligned} \PY{o}{=} \PY{p}{(}\PY{k+kt}{slob\PYZus{}t} \PY{o}{*}\PY{p}{)}\PY{n}{ALIGN}\PY{p}{(}\PY{p}{(}\PY{k+kt}{unsigned} \PY{k+kt}{long}\PY{p}{)}\PY{n}{cur}\PY{p}{,} \PY{n}{align}\PY{p}{)}\PY{p}{;}
+			\PY{n}{delta} \PY{o}{=} \PY{n}{aligned} \PY{o}{\PYZhy{}} \PY{n}{cur}\PY{p}{;}
+		\PY{p}{\PYZcb{}}
+		\PY{n}{fits} \PY{o}{=} \PY{n}{avail} \PY{o}{\PYZgt{}}\PY{o}{=} \PY{n}{units} \PY{o}{+} \PY{n}{delta}\PY{p}{;}
+		\PY{k}{if} \PY{p}{(}\PY{o}{!}\PY{n}{apply} \PY{o}{\PYZam{}}\PY{o}{\PYZam{}} \PY{n}{fits} \PY{o}{\PYZam{}}\PY{o}{\PYZam{}} \PY{p}{(}\PY{o}{!}\PY{o}{*}\PY{n}{best\PYZus{}fit} \PY{o}{|}\PY{o}{|} \PY{p}{(}\PY{n}{avail} \PY{o}{\PYZhy{}} \PY{n}{units} \PY{o}{+} \PY{n}{delta} \PY{o}{\PYZlt{}} \PY{o}{*}\PY{n}{best\PYZus{}fit}\PY{p}{)}\PY{p}{)}\PY{p}{)} \PY{p}{\PYZob{}} \PY{c+cm}{/* room enough? */}
+			\PY{o}{*}\PY{n}{best\PYZus{}fit} \PY{o}{=} \PY{n}{avail} \PY{o}{\PYZhy{}} \PY{n}{units} \PY{o}{+} \PY{n}{delta}\PY{p}{;}
+		\PY{p}{\PYZcb{}}
+
+		\PY{k}{if} \PY{p}{(}\PY{n}{apply} \PY{o}{\PYZam{}}\PY{o}{\PYZam{}} \PY{n}{fits} \PY{o}{\PYZam{}}\PY{o}{\PYZam{}} \PY{p}{(}\PY{o}{!}\PY{o}{*}\PY{n}{best\PYZus{}fit} \PY{o}{|}\PY{o}{|} \PY{n}{avail} \PY{o}{\PYZhy{}} \PY{n}{units} \PY{o}{+} \PY{n}{delta} \PY{o}{=}\PY{o}{=} \PY{o}{*}\PY{n}{best\PYZus{}fit}\PY{p}{)}\PY{p}{)} \PY{p}{\PYZob{}} \PY{c+cm}{/* room enough? */}
+			\PY{k+kt}{slob\PYZus{}t} \PY{o}{*}\PY{n}{next}\PY{p}{;}
+
+			\PY{k}{if} \PY{p}{(}\PY{n}{delta}\PY{p}{)} \PY{p}{\PYZob{}} \PY{c+cm}{/* need to fragment head to align? */}
+				\PY{n}{next} \PY{o}{=} \PY{n}{slob\PYZus{}next}\PY{p}{(}\PY{n}{cur}\PY{p}{)}\PY{p}{;}
+				\PY{n}{set\PYZus{}slob}\PY{p}{(}\PY{n}{aligned}\PY{p}{,} \PY{n}{avail} \PY{o}{\PYZhy{}} \PY{n}{delta}\PY{p}{,} \PY{n}{next}\PY{p}{)}\PY{p}{;}
+				\PY{n}{set\PYZus{}slob}\PY{p}{(}\PY{n}{cur}\PY{p}{,} \PY{n}{delta}\PY{p}{,} \PY{n}{aligned}\PY{p}{)}\PY{p}{;}
+				\PY{n}{prev} \PY{o}{=} \PY{n}{cur}\PY{p}{;}
+				\PY{n}{cur} \PY{o}{=} \PY{n}{aligned}\PY{p}{;}
+				\PY{n}{avail} \PY{o}{=} \PY{n}{slob\PYZus{}units}\PY{p}{(}\PY{n}{cur}\PY{p}{)}\PY{p}{;}
+			\PY{p}{\PYZcb{}}
+
+			\PY{n}{next} \PY{o}{=} \PY{n}{slob\PYZus{}next}\PY{p}{(}\PY{n}{cur}\PY{p}{)}\PY{p}{;}
+			\PY{k}{if} \PY{p}{(}\PY{n}{avail} \PY{o}{=}\PY{o}{=} \PY{n}{units}\PY{p}{)} \PY{p}{\PYZob{}} \PY{c+cm}{/* exact fit? unlink. */}
+				\PY{k}{if} \PY{p}{(}\PY{n}{prev}\PY{p}{)}
+					\PY{n}{set\PYZus{}slob}\PY{p}{(}\PY{n}{prev}\PY{p}{,} \PY{n}{slob\PYZus{}units}\PY{p}{(}\PY{n}{prev}\PY{p}{)}\PY{p}{,} \PY{n}{next}\PY{p}{)}\PY{p}{;}
+				\PY{k}{else}
+					\PY{n}{sp}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{freelist} \PY{o}{=} \PY{n}{next}\PY{p}{;}
+			\PY{p}{\PYZcb{}} \PY{k}{else} \PY{p}{\PYZob{}} \PY{c+cm}{/* fragment */}
+				\PY{k}{if} \PY{p}{(}\PY{n}{prev}\PY{p}{)}
+					\PY{n}{set\PYZus{}slob}\PY{p}{(}\PY{n}{prev}\PY{p}{,} \PY{n}{slob\PYZus{}units}\PY{p}{(}\PY{n}{prev}\PY{p}{)}\PY{p}{,} \PY{n}{cur} \PY{o}{+} \PY{n}{units}\PY{p}{)}\PY{p}{;}
+				\PY{k}{else}
+					\PY{n}{sp}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{freelist} \PY{o}{=} \PY{n}{cur} \PY{o}{+} \PY{n}{units}\PY{p}{;}
+				\PY{n}{set\PYZus{}slob}\PY{p}{(}\PY{n}{cur} \PY{o}{+} \PY{n}{units}\PY{p}{,} \PY{n}{avail} \PY{o}{\PYZhy{}} \PY{n}{units}\PY{p}{,} \PY{n}{next}\PY{p}{)}\PY{p}{;}
+			\PY{p}{\PYZcb{}}
+
+			\PY{n}{sp}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{units} \PY{o}{\PYZhy{}}\PY{o}{=} \PY{n}{units}\PY{p}{;}
+			\PY{k}{if} \PY{p}{(}\PY{o}{!}\PY{n}{sp}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{units}\PY{p}{)}
+				\PY{n}{clear\PYZus{}slob\PYZus{}page\PYZus{}free}\PY{p}{(}\PY{n}{sp}\PY{p}{)}\PY{p}{;}
+			\PY{k}{return} \PY{n}{cur}\PY{p}{;}
+		\PY{p}{\PYZcb{}}
+		\PY{k}{if} \PY{p}{(}\PY{n}{slob\PYZus{}last}\PY{p}{(}\PY{n}{cur}\PY{p}{)}\PY{p}{)}
+			\PY{k}{return} \PY{n+nb}{NULL}\PY{p}{;}
+	\PY{p}{\PYZcb{}}
+\PY{p}{\PYZcb{}}
+
+\PY{c+cm}{/*}
+\PY{c+cm}{ * slob\PYZus{}alloc: entry point into the slob allocator.}
+\PY{c+cm}{ */}
+\PY{k}{static} \PY{k+kt}{void} \PY{o}{*}\PY{n+nf}{slob\PYZus{}alloc}\PY{p}{(}\PY{k+kt}{size\PYZus{}t} \PY{n}{size}\PY{p}{,} \PY{k+kt}{gfp\PYZus{}t} \PY{n}{gfp}\PY{p}{,} \PY{k+kt}{int} \PY{n}{align}\PY{p}{,} \PY{k+kt}{int} \PY{n}{node}\PY{p}{)}
+\PY{p}{\PYZob{}}
+	\PY{k}{struct} \PY{n}{page} \PY{o}{*}\PY{n}{sp}\PY{p}{;}
+	\PY{k}{struct} \PY{n}{list\PYZus{}head} \PY{o}{*}\PY{n}{prev}\PY{p}{;}
+	\PY{k}{struct} \PY{n}{list\PYZus{}head} \PY{o}{*}\PY{n}{slob\PYZus{}list}\PY{p}{;}
+	\PY{k+kt}{slob\PYZus{}t} \PY{o}{*}\PY{n}{b} \PY{o}{=} \PY{n+nb}{NULL}\PY{p}{;}
+	\PY{k+kt}{unsigned} \PY{k+kt}{long} \PY{n}{flags}\PY{p}{;}
+	\PY{k+kt}{int} \PY{n}{best\PYZus{}fit} \PY{o}{=} \PY{l+m+mi}{0}\PY{p}{;}
+	\PY{k+kt}{int} \PY{n}{apply}\PY{p}{;}
+
+	\PY{k}{if} \PY{p}{(}\PY{n}{size} \PY{o}{\PYZlt{}} \PY{n}{SLOB\PYZus{}BREAK1}\PY{p}{)}
+		\PY{n}{slob\PYZus{}list} \PY{o}{=} \PY{o}{\PYZam{}}\PY{n}{free\PYZus{}slob\PYZus{}small}\PY{p}{;}
+	\PY{k}{else} \PY{k}{if} \PY{p}{(}\PY{n}{size} \PY{o}{\PYZlt{}} \PY{n}{SLOB\PYZus{}BREAK2}\PY{p}{)}
+		\PY{n}{slob\PYZus{}list} \PY{o}{=} \PY{o}{\PYZam{}}\PY{n}{free\PYZus{}slob\PYZus{}medium}\PY{p}{;}
+	\PY{k}{else}
+		\PY{n}{slob\PYZus{}list} \PY{o}{=} \PY{o}{\PYZam{}}\PY{n}{free\PYZus{}slob\PYZus{}large}\PY{p}{;}
+
+	\PY{n}{spin\PYZus{}lock\PYZus{}irqsave}\PY{p}{(}\PY{o}{\PYZam{}}\PY{n}{slob\PYZus{}lock}\PY{p}{,} \PY{n}{flags}\PY{p}{)}\PY{p}{;}
+	\PY{c+cm}{/* Iterate through each partially free page, try to find room */}
+	\PY{k}{for}\PY{p}{(}\PY{n}{apply} \PY{o}{=} \PY{l+m+mi}{0}\PY{p}{;} \PY{n}{apply} \PY{o}{\PYZlt{}}\PY{o}{=} \PY{l+m+mi}{1}\PY{p}{;} \PY{n}{apply}\PY{o}{+}\PY{o}{+}\PY{p}{)} \PY{p}{\PYZob{}}
+		\PY{n}{list\PYZus{}for\PYZus{}each\PYZus{}entry}\PY{p}{(}\PY{n}{sp}\PY{p}{,} \PY{n}{slob\PYZus{}list}\PY{p}{,} \PY{n}{list}\PY{p}{)} \PY{p}{\PYZob{}}
+	\PY{c+cp}{\PYZsh{}}\PY{c+cp}{ifdef CONFIG\PYZus{}NUMA}
+			\PY{c+cm}{/*}
+\PY{c+cm}{			 * If there\PYZsq{}s a node specification, search for a partial}
+\PY{c+cm}{			 * page with a matching node id in the freelist.}
+\PY{c+cm}{			 */}
+			\PY{k}{if} \PY{p}{(}\PY{n}{node} \PY{o}{!}\PY{o}{=} \PY{n}{NUMA\PYZus{}NO\PYZus{}NODE} \PY{o}{\PYZam{}}\PY{o}{\PYZam{}} \PY{n}{page\PYZus{}to\PYZus{}nid}\PY{p}{(}\PY{n}{sp}\PY{p}{)} \PY{o}{!}\PY{o}{=} \PY{n}{node}\PY{p}{)}
+				\PY{k}{continue}\PY{p}{;}
+	\PY{c+cp}{\PYZsh{}}\PY{c+cp}{endif}
+			\PY{c+cm}{/* Enough room on this page? */}
+			\PY{k}{if} \PY{p}{(}\PY{n}{sp}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{units} \PY{o}{\PYZlt{}} \PY{n}{SLOB\PYZus{}UNITS}\PY{p}{(}\PY{n}{size}\PY{p}{)}\PY{p}{)}
+				\PY{k}{continue}\PY{p}{;}
+
+			\PY{c+cm}{/* Attempt to alloc */}
+			\PY{n}{prev} \PY{o}{=} \PY{n}{sp}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{list}\PY{p}{.}\PY{n}{prev}\PY{p}{;}
+			\PY{n}{b} \PY{o}{=} \PY{n}{slob\PYZus{}page\PYZus{}alloc}\PY{p}{(}\PY{n}{sp}\PY{p}{,} \PY{n}{size}\PY{p}{,} \PY{n}{align}\PY{p}{,} \PY{n}{apply}\PY{p}{,} \PY{o}{\PYZam{}}\PY{n}{best\PYZus{}fit}\PY{p}{)}\PY{p}{;}
+			\PY{k}{if} \PY{p}{(}\PY{o}{!}\PY{n}{b}\PY{p}{)}
+				\PY{k}{continue}\PY{p}{;}
+			\PY{k}{break}\PY{p}{;}
+		\PY{p}{\PYZcb{}}
+	\PY{p}{\PYZcb{}}
+	\PY{n}{spin\PYZus{}unlock\PYZus{}irqrestore}\PY{p}{(}\PY{o}{\PYZam{}}\PY{n}{slob\PYZus{}lock}\PY{p}{,} \PY{n}{flags}\PY{p}{)}\PY{p}{;}
+
+	\PY{c+cm}{/* Not enough space: must allocate a new page */}
+	\PY{k}{if} \PY{p}{(}\PY{o}{!}\PY{n}{b}\PY{p}{)} \PY{p}{\PYZob{}}
+		\PY{n}{b} \PY{o}{=} \PY{n}{slob\PYZus{}new\PYZus{}pages}\PY{p}{(}\PY{n}{gfp} \PY{o}{\PYZam{}} \PY{o}{\PYZti{}}\PY{n}{\PYZus{}\PYZus{}GFP\PYZus{}ZERO}\PY{p}{,} \PY{l+m+mi}{0}\PY{p}{,} \PY{n}{node}\PY{p}{)}\PY{p}{;}
+		\PY{k}{if} \PY{p}{(}\PY{o}{!}\PY{n}{b}\PY{p}{)}
+			\PY{k}{return} \PY{n+nb}{NULL}\PY{p}{;}
+		\PY{n}{sp} \PY{o}{=} \PY{n}{virt\PYZus{}to\PYZus{}page}\PY{p}{(}\PY{n}{b}\PY{p}{)}\PY{p}{;}
+		\PY{n}{\PYZus{}\PYZus{}SetPageSlab}\PY{p}{(}\PY{n}{sp}\PY{p}{)}\PY{p}{;}
+
+		\PY{n}{spin\PYZus{}lock\PYZus{}irqsave}\PY{p}{(}\PY{o}{\PYZam{}}\PY{n}{slob\PYZus{}lock}\PY{p}{,} \PY{n}{flags}\PY{p}{)}\PY{p}{;}
+		\PY{n}{sp}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{units} \PY{o}{=} \PY{n}{SLOB\PYZus{}UNITS}\PY{p}{(}\PY{n}{PAGE\PYZus{}SIZE}\PY{p}{)}\PY{p}{;}
+		\PY{n}{sp}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{freelist} \PY{o}{=} \PY{n}{b}\PY{p}{;}
+		\PY{n}{INIT\PYZus{}LIST\PYZus{}HEAD}\PY{p}{(}\PY{o}{\PYZam{}}\PY{n}{sp}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{list}\PY{p}{)}\PY{p}{;}
+		\PY{n}{set\PYZus{}slob}\PY{p}{(}\PY{n}{b}\PY{p}{,} \PY{n}{SLOB\PYZus{}UNITS}\PY{p}{(}\PY{n}{PAGE\PYZus{}SIZE}\PY{p}{)}\PY{p}{,} \PY{n}{b} \PY{o}{+} \PY{n}{SLOB\PYZus{}UNITS}\PY{p}{(}\PY{n}{PAGE\PYZus{}SIZE}\PY{p}{)}\PY{p}{)}\PY{p}{;}
+		\PY{n}{set\PYZus{}slob\PYZus{}page\PYZus{}free}\PY{p}{(}\PY{n}{sp}\PY{p}{,} \PY{n}{slob\PYZus{}list}\PY{p}{)}\PY{p}{;}
+		\PY{n}{best\PYZus{}fit} \PY{o}{=} \PY{l+m+mi}{0}\PY{p}{;}
+		\PY{n}{apply} \PY{o}{=} \PY{l+m+mi}{1}\PY{p}{;}
+		\PY{n}{b} \PY{o}{=} \PY{n}{slob\PYZus{}page\PYZus{}alloc}\PY{p}{(}\PY{n}{sp}\PY{p}{,} \PY{n}{size}\PY{p}{,} \PY{n}{align}\PY{p}{,} \PY{n}{apply}\PY{p}{,} \PY{o}{\PYZam{}}\PY{n}{best\PYZus{}fit}\PY{p}{)}\PY{p}{;}
+		\PY{n}{BUG\PYZus{}ON}\PY{p}{(}\PY{o}{!}\PY{n}{b}\PY{p}{)}\PY{p}{;}
+		\PY{n}{spin\PYZus{}unlock\PYZus{}irqrestore}\PY{p}{(}\PY{o}{\PYZam{}}\PY{n}{slob\PYZus{}lock}\PY{p}{,} \PY{n}{flags}\PY{p}{)}\PY{p}{;}
+	\PY{p}{\PYZcb{}}
+	\PY{k}{if} \PY{p}{(}\PY{n}{unlikely}\PY{p}{(}\PY{p}{(}\PY{n}{gfp} \PY{o}{\PYZam{}} \PY{n}{\PYZus{}\PYZus{}GFP\PYZus{}ZERO}\PY{p}{)} \PY{o}{\PYZam{}}\PY{o}{\PYZam{}} \PY{n}{b}\PY{p}{)}\PY{p}{)}
+		\PY{n}{memset}\PY{p}{(}\PY{n}{b}\PY{p}{,} \PY{l+m+mi}{0}\PY{p}{,} \PY{n}{size}\PY{p}{)}\PY{p}{;}
+	\PY{k}{return} \PY{n}{b}\PY{p}{;}
+\PY{p}{\PYZcb{}}
+
+\PY{c+cm}{/*}
+\PY{c+cm}{ * slob\PYZus{}free: entry point into the slob allocator.}
+\PY{c+cm}{ */}
+\PY{k}{static} \PY{k+kt}{void} \PY{n+nf}{slob\PYZus{}free}\PY{p}{(}\PY{k+kt}{void} \PY{o}{*}\PY{n}{block}\PY{p}{,} \PY{k+kt}{int} \PY{n}{size}\PY{p}{)}
+\PY{p}{\PYZob{}}
+	\PY{k}{struct} \PY{n}{page} \PY{o}{*}\PY{n}{sp}\PY{p}{;}
+	\PY{k+kt}{slob\PYZus{}t} \PY{o}{*}\PY{n}{prev}\PY{p}{,} \PY{o}{*}\PY{n}{next}\PY{p}{,} \PY{o}{*}\PY{n}{b} \PY{o}{=} \PY{p}{(}\PY{k+kt}{slob\PYZus{}t} \PY{o}{*}\PY{p}{)}\PY{n}{block}\PY{p}{;}
+	\PY{k+kt}{slobidx\PYZus{}t} \PY{n}{units}\PY{p}{;}
+	\PY{k+kt}{unsigned} \PY{k+kt}{long} \PY{n}{flags}\PY{p}{;}
+	\PY{k}{struct} \PY{n}{list\PYZus{}head} \PY{o}{*}\PY{n}{slob\PYZus{}list}\PY{p}{;}
+
+	\PY{k}{if} \PY{p}{(}\PY{n}{unlikely}\PY{p}{(}\PY{n}{ZERO\PYZus{}OR\PYZus{}NULL\PYZus{}PTR}\PY{p}{(}\PY{n}{block}\PY{p}{)}\PY{p}{)}\PY{p}{)}
+		\PY{k}{return}\PY{p}{;}
+	\PY{n}{BUG\PYZus{}ON}\PY{p}{(}\PY{o}{!}\PY{n}{size}\PY{p}{)}\PY{p}{;}
+
+	\PY{n}{sp} \PY{o}{=} \PY{n}{virt\PYZus{}to\PYZus{}page}\PY{p}{(}\PY{n}{block}\PY{p}{)}\PY{p}{;}
+	\PY{n}{units} \PY{o}{=} \PY{n}{SLOB\PYZus{}UNITS}\PY{p}{(}\PY{n}{size}\PY{p}{)}\PY{p}{;}
+
+	\PY{n}{spin\PYZus{}lock\PYZus{}irqsave}\PY{p}{(}\PY{o}{\PYZam{}}\PY{n}{slob\PYZus{}lock}\PY{p}{,} \PY{n}{flags}\PY{p}{)}\PY{p}{;}
+
+	\PY{k}{if} \PY{p}{(}\PY{n}{sp}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{units} \PY{o}{+} \PY{n}{units} \PY{o}{=}\PY{o}{=} \PY{n}{SLOB\PYZus{}UNITS}\PY{p}{(}\PY{n}{PAGE\PYZus{}SIZE}\PY{p}{)}\PY{p}{)} \PY{p}{\PYZob{}}
+		\PY{c+cm}{/* Go directly to page allocator. Do not pass slob allocator */}
+		\PY{k}{if} \PY{p}{(}\PY{n}{slob\PYZus{}page\PYZus{}free}\PY{p}{(}\PY{n}{sp}\PY{p}{)}\PY{p}{)}
+			\PY{n}{clear\PYZus{}slob\PYZus{}page\PYZus{}free}\PY{p}{(}\PY{n}{sp}\PY{p}{)}\PY{p}{;}
+		\PY{n}{spin\PYZus{}unlock\PYZus{}irqrestore}\PY{p}{(}\PY{o}{\PYZam{}}\PY{n}{slob\PYZus{}lock}\PY{p}{,} \PY{n}{flags}\PY{p}{)}\PY{p}{;}
+		\PY{n}{\PYZus{}\PYZus{}ClearPageSlab}\PY{p}{(}\PY{n}{sp}\PY{p}{)}\PY{p}{;}
+		\PY{n}{page\PYZus{}mapcount\PYZus{}reset}\PY{p}{(}\PY{n}{sp}\PY{p}{)}\PY{p}{;}
+		\PY{n}{slob\PYZus{}free\PYZus{}pages}\PY{p}{(}\PY{n}{b}\PY{p}{,} \PY{l+m+mi}{0}\PY{p}{)}\PY{p}{;}
+		\PY{k}{return}\PY{p}{;}
+	\PY{p}{\PYZcb{}}
+
+	\PY{k}{if} \PY{p}{(}\PY{o}{!}\PY{n}{slob\PYZus{}page\PYZus{}free}\PY{p}{(}\PY{n}{sp}\PY{p}{)}\PY{p}{)} \PY{p}{\PYZob{}}
+		\PY{c+cm}{/* This slob page is about to become partially free. Easy! */}
+		\PY{n}{sp}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{units} \PY{o}{=} \PY{n}{units}\PY{p}{;}
+		\PY{n}{sp}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{freelist} \PY{o}{=} \PY{n}{b}\PY{p}{;}
+		\PY{n}{set\PYZus{}slob}\PY{p}{(}\PY{n}{b}\PY{p}{,} \PY{n}{units}\PY{p}{,}
+			\PY{p}{(}\PY{k+kt}{void} \PY{o}{*}\PY{p}{)}\PY{p}{(}\PY{p}{(}\PY{k+kt}{unsigned} \PY{k+kt}{long}\PY{p}{)}\PY{p}{(}\PY{n}{b} \PY{o}{+}
+					\PY{n}{SLOB\PYZus{}UNITS}\PY{p}{(}\PY{n}{PAGE\PYZus{}SIZE}\PY{p}{)}\PY{p}{)} \PY{o}{\PYZam{}} \PY{n}{PAGE\PYZus{}MASK}\PY{p}{)}\PY{p}{)}\PY{p}{;}
+		\PY{k}{if} \PY{p}{(}\PY{n}{size} \PY{o}{\PYZlt{}} \PY{n}{SLOB\PYZus{}BREAK1}\PY{p}{)}
+			\PY{n}{slob\PYZus{}list} \PY{o}{=} \PY{o}{\PYZam{}}\PY{n}{free\PYZus{}slob\PYZus{}small}\PY{p}{;}
+		\PY{k}{else} \PY{k}{if} \PY{p}{(}\PY{n}{size} \PY{o}{\PYZlt{}} \PY{n}{SLOB\PYZus{}BREAK2}\PY{p}{)}
+			\PY{n}{slob\PYZus{}list} \PY{o}{=} \PY{o}{\PYZam{}}\PY{n}{free\PYZus{}slob\PYZus{}medium}\PY{p}{;}
+		\PY{k}{else}
+			\PY{n}{slob\PYZus{}list} \PY{o}{=} \PY{o}{\PYZam{}}\PY{n}{free\PYZus{}slob\PYZus{}large}\PY{p}{;}
+		\PY{n}{set\PYZus{}slob\PYZus{}page\PYZus{}free}\PY{p}{(}\PY{n}{sp}\PY{p}{,} \PY{n}{slob\PYZus{}list}\PY{p}{)}\PY{p}{;}
+		\PY{k}{goto} \PY{n}{out}\PY{p}{;}
+	\PY{p}{\PYZcb{}}
+
+	\PY{c+cm}{/*}
+\PY{c+cm}{	 * Otherwise the page is already partially free, so find reinsertion}
+\PY{c+cm}{	 * point.}
+\PY{c+cm}{	 */}
+	\PY{n}{sp}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{units} \PY{o}{+}\PY{o}{=} \PY{n}{units}\PY{p}{;}
+
+	\PY{k}{if} \PY{p}{(}\PY{n}{b} \PY{o}{\PYZlt{}} \PY{p}{(}\PY{k+kt}{slob\PYZus{}t} \PY{o}{*}\PY{p}{)}\PY{n}{sp}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{freelist}\PY{p}{)} \PY{p}{\PYZob{}}
+		\PY{k}{if} \PY{p}{(}\PY{n}{b} \PY{o}{+} \PY{n}{units} \PY{o}{=}\PY{o}{=} \PY{n}{sp}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{freelist}\PY{p}{)} \PY{p}{\PYZob{}}
+			\PY{n}{units} \PY{o}{+}\PY{o}{=} \PY{n}{slob\PYZus{}units}\PY{p}{(}\PY{n}{sp}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{freelist}\PY{p}{)}\PY{p}{;}
+			\PY{n}{sp}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{freelist} \PY{o}{=} \PY{n}{slob\PYZus{}next}\PY{p}{(}\PY{n}{sp}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{freelist}\PY{p}{)}\PY{p}{;}
+		\PY{p}{\PYZcb{}}
+		\PY{n}{set\PYZus{}slob}\PY{p}{(}\PY{n}{b}\PY{p}{,} \PY{n}{units}\PY{p}{,} \PY{n}{sp}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{freelist}\PY{p}{)}\PY{p}{;}
+		\PY{n}{sp}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{freelist} \PY{o}{=} \PY{n}{b}\PY{p}{;}
+	\PY{p}{\PYZcb{}} \PY{k}{else} \PY{p}{\PYZob{}}
+		\PY{n}{prev} \PY{o}{=} \PY{n}{sp}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{freelist}\PY{p}{;}
+		\PY{n}{next} \PY{o}{=} \PY{n}{slob\PYZus{}next}\PY{p}{(}\PY{n}{prev}\PY{p}{)}\PY{p}{;}
+		\PY{k}{while} \PY{p}{(}\PY{n}{b} \PY{o}{\PYZgt{}} \PY{n}{next}\PY{p}{)} \PY{p}{\PYZob{}}
+			\PY{n}{prev} \PY{o}{=} \PY{n}{next}\PY{p}{;}
+			\PY{n}{next} \PY{o}{=} \PY{n}{slob\PYZus{}next}\PY{p}{(}\PY{n}{prev}\PY{p}{)}\PY{p}{;}
+		\PY{p}{\PYZcb{}}
+
+		\PY{k}{if} \PY{p}{(}\PY{o}{!}\PY{n}{slob\PYZus{}last}\PY{p}{(}\PY{n}{prev}\PY{p}{)} \PY{o}{\PYZam{}}\PY{o}{\PYZam{}} \PY{n}{b} \PY{o}{+} \PY{n}{units} \PY{o}{=}\PY{o}{=} \PY{n}{next}\PY{p}{)} \PY{p}{\PYZob{}}
+			\PY{n}{units} \PY{o}{+}\PY{o}{=} \PY{n}{slob\PYZus{}units}\PY{p}{(}\PY{n}{next}\PY{p}{)}\PY{p}{;}
+			\PY{n}{set\PYZus{}slob}\PY{p}{(}\PY{n}{b}\PY{p}{,} \PY{n}{units}\PY{p}{,} \PY{n}{slob\PYZus{}next}\PY{p}{(}\PY{n}{next}\PY{p}{)}\PY{p}{)}\PY{p}{;}
+		\PY{p}{\PYZcb{}} \PY{k}{else}
+			\PY{n}{set\PYZus{}slob}\PY{p}{(}\PY{n}{b}\PY{p}{,} \PY{n}{units}\PY{p}{,} \PY{n}{next}\PY{p}{)}\PY{p}{;}
+
+		\PY{k}{if} \PY{p}{(}\PY{n}{prev} \PY{o}{+} \PY{n}{slob\PYZus{}units}\PY{p}{(}\PY{n}{prev}\PY{p}{)} \PY{o}{=}\PY{o}{=} \PY{n}{b}\PY{p}{)} \PY{p}{\PYZob{}}
+			\PY{n}{units} \PY{o}{=} \PY{n}{slob\PYZus{}units}\PY{p}{(}\PY{n}{b}\PY{p}{)} \PY{o}{+} \PY{n}{slob\PYZus{}units}\PY{p}{(}\PY{n}{prev}\PY{p}{)}\PY{p}{;}
+			\PY{n}{set\PYZus{}slob}\PY{p}{(}\PY{n}{prev}\PY{p}{,} \PY{n}{units}\PY{p}{,} \PY{n}{slob\PYZus{}next}\PY{p}{(}\PY{n}{b}\PY{p}{)}\PY{p}{)}\PY{p}{;}
+		\PY{p}{\PYZcb{}} \PY{k}{else}
+			\PY{n}{set\PYZus{}slob}\PY{p}{(}\PY{n}{prev}\PY{p}{,} \PY{n}{slob\PYZus{}units}\PY{p}{(}\PY{n}{prev}\PY{p}{)}\PY{p}{,} \PY{n}{b}\PY{p}{)}\PY{p}{;}
+	\PY{p}{\PYZcb{}}
+\PY{n+nl}{out}\PY{p}{:}
+	\PY{n}{spin\PYZus{}unlock\PYZus{}irqrestore}\PY{p}{(}\PY{o}{\PYZam{}}\PY{n}{slob\PYZus{}lock}\PY{p}{,} \PY{n}{flags}\PY{p}{)}\PY{p}{;}
+\PY{p}{\PYZcb{}}
+
+\PY{c+cm}{/*}
+\PY{c+cm}{ * End of slob allocator proper. Begin kmem\PYZus{}cache\PYZus{}alloc and kmalloc frontend.}
+\PY{c+cm}{ */}
+
+\PY{k}{static} \PY{n}{\PYZus{}\PYZus{}always\PYZus{}inline} \PY{k+kt}{void} \PY{o}{*}
+\PY{n+nf}{\PYZus{}\PYZus{}do\PYZus{}kmalloc\PYZus{}node}\PY{p}{(}\PY{k+kt}{size\PYZus{}t} \PY{n}{size}\PY{p}{,} \PY{k+kt}{gfp\PYZus{}t} \PY{n}{gfp}\PY{p}{,} \PY{k+kt}{int} \PY{n}{node}\PY{p}{,} \PY{k+kt}{unsigned} \PY{k+kt}{long} \PY{n}{caller}\PY{p}{)}
+\PY{p}{\PYZob{}}
+	\PY{k+kt}{unsigned} \PY{k+kt}{int} \PY{o}{*}\PY{n}{m}\PY{p}{;}
+	\PY{k+kt}{int} \PY{n}{align} \PY{o}{=} \PY{k+kt}{max\PYZus{}t}\PY{p}{(}\PY{k+kt}{size\PYZus{}t}\PY{p}{,} \PY{n}{ARCH\PYZus{}KMALLOC\PYZus{}MINALIGN}\PY{p}{,} \PY{n}{ARCH\PYZus{}SLAB\PYZus{}MINALIGN}\PY{p}{)}\PY{p}{;}
+	\PY{k+kt}{void} \PY{o}{*}\PY{n}{ret}\PY{p}{;}
+
+	\PY{n}{gfp} \PY{o}{\PYZam{}}\PY{o}{=} \PY{n}{gfp\PYZus{}allowed\PYZus{}mask}\PY{p}{;}
+
+	\PY{n}{lockdep\PYZus{}trace\PYZus{}alloc}\PY{p}{(}\PY{n}{gfp}\PY{p}{)}\PY{p}{;}
+
+	\PY{k}{if} \PY{p}{(}\PY{n}{size} \PY{o}{\PYZlt{}} \PY{n}{PAGE\PYZus{}SIZE} \PY{o}{\PYZhy{}} \PY{n}{align}\PY{p}{)} \PY{p}{\PYZob{}}
+		\PY{k}{if} \PY{p}{(}\PY{o}{!}\PY{n}{size}\PY{p}{)}
+			\PY{k}{return} \PY{n}{ZERO\PYZus{}SIZE\PYZus{}PTR}\PY{p}{;}
+
+		\PY{n}{m} \PY{o}{=} \PY{n}{slob\PYZus{}alloc}\PY{p}{(}\PY{n}{size} \PY{o}{+} \PY{n}{align}\PY{p}{,} \PY{n}{gfp}\PY{p}{,} \PY{n}{align}\PY{p}{,} \PY{n}{node}\PY{p}{)}\PY{p}{;}
+
+		\PY{k}{if} \PY{p}{(}\PY{o}{!}\PY{n}{m}\PY{p}{)}
+			\PY{k}{return} \PY{n+nb}{NULL}\PY{p}{;}
+		\PY{o}{*}\PY{n}{m} \PY{o}{=} \PY{n}{size}\PY{p}{;}
+		\PY{n}{ret} \PY{o}{=} \PY{p}{(}\PY{k+kt}{void} \PY{o}{*}\PY{p}{)}\PY{n}{m} \PY{o}{+} \PY{n}{align}\PY{p}{;}
+
+		\PY{n}{trace\PYZus{}kmalloc\PYZus{}node}\PY{p}{(}\PY{n}{caller}\PY{p}{,} \PY{n}{ret}\PY{p}{,}
+				   \PY{n}{size}\PY{p}{,} \PY{n}{size} \PY{o}{+} \PY{n}{align}\PY{p}{,} \PY{n}{gfp}\PY{p}{,} \PY{n}{node}\PY{p}{)}\PY{p}{;}
+	\PY{p}{\PYZcb{}} \PY{k}{else} \PY{p}{\PYZob{}}
+		\PY{k+kt}{unsigned} \PY{k+kt}{int} \PY{n}{order} \PY{o}{=} \PY{n}{get\PYZus{}order}\PY{p}{(}\PY{n}{size}\PY{p}{)}\PY{p}{;}
+
+		\PY{k}{if} \PY{p}{(}\PY{n}{likely}\PY{p}{(}\PY{n}{order}\PY{p}{)}\PY{p}{)}
+			\PY{n}{gfp} \PY{o}{|}\PY{o}{=} \PY{n}{\PYZus{}\PYZus{}GFP\PYZus{}COMP}\PY{p}{;}
+		\PY{n}{ret} \PY{o}{=} \PY{n}{slob\PYZus{}new\PYZus{}pages}\PY{p}{(}\PY{n}{gfp}\PY{p}{,} \PY{n}{order}\PY{p}{,} \PY{n}{node}\PY{p}{)}\PY{p}{;}
+
+		\PY{n}{trace\PYZus{}kmalloc\PYZus{}node}\PY{p}{(}\PY{n}{caller}\PY{p}{,} \PY{n}{ret}\PY{p}{,}
+				   \PY{n}{size}\PY{p}{,} \PY{n}{PAGE\PYZus{}SIZE} \PY{o}{\PYZlt{}}\PY{o}{\PYZlt{}} \PY{n}{order}\PY{p}{,} \PY{n}{gfp}\PY{p}{,} \PY{n}{node}\PY{p}{)}\PY{p}{;}
+	\PY{p}{\PYZcb{}}
+
+	\PY{n}{kmemleak\PYZus{}alloc}\PY{p}{(}\PY{n}{ret}\PY{p}{,} \PY{n}{size}\PY{p}{,} \PY{l+m+mi}{1}\PY{p}{,} \PY{n}{gfp}\PY{p}{)}\PY{p}{;}
+	\PY{k}{return} \PY{n}{ret}\PY{p}{;}
+\PY{p}{\PYZcb{}}
+
+\PY{k+kt}{void} \PY{o}{*}\PY{n+nf}{\PYZus{}\PYZus{}kmalloc}\PY{p}{(}\PY{k+kt}{size\PYZus{}t} \PY{n}{size}\PY{p}{,} \PY{k+kt}{gfp\PYZus{}t} \PY{n}{gfp}\PY{p}{)}
+\PY{p}{\PYZob{}}
+	\PY{k}{return} \PY{n}{\PYZus{}\PYZus{}do\PYZus{}kmalloc\PYZus{}node}\PY{p}{(}\PY{n}{size}\PY{p}{,} \PY{n}{gfp}\PY{p}{,} \PY{n}{NUMA\PYZus{}NO\PYZus{}NODE}\PY{p}{,} \PY{n}{\PYZus{}RET\PYZus{}IP\PYZus{}}\PY{p}{)}\PY{p}{;}
+\PY{p}{\PYZcb{}}
+\PY{n}{EXPORT\PYZus{}SYMBOL}\PY{p}{(}\PY{n}{\PYZus{}\PYZus{}kmalloc}\PY{p}{)}\PY{p}{;}
+
+\PY{c+cp}{\PYZsh{}}\PY{c+cp}{ifdef CONFIG\PYZus{}TRACING}
+\PY{k+kt}{void} \PY{o}{*}\PY{n+nf}{\PYZus{}\PYZus{}kmalloc\PYZus{}track\PYZus{}caller}\PY{p}{(}\PY{k+kt}{size\PYZus{}t} \PY{n}{size}\PY{p}{,} \PY{k+kt}{gfp\PYZus{}t} \PY{n}{gfp}\PY{p}{,} \PY{k+kt}{unsigned} \PY{k+kt}{long} \PY{n}{caller}\PY{p}{)}
+\PY{p}{\PYZob{}}
+	\PY{k}{return} \PY{n}{\PYZus{}\PYZus{}do\PYZus{}kmalloc\PYZus{}node}\PY{p}{(}\PY{n}{size}\PY{p}{,} \PY{n}{gfp}\PY{p}{,} \PY{n}{NUMA\PYZus{}NO\PYZus{}NODE}\PY{p}{,} \PY{n}{caller}\PY{p}{)}\PY{p}{;}
+\PY{p}{\PYZcb{}}
+
+\PY{c+cp}{\PYZsh{}}\PY{c+cp}{ifdef CONFIG\PYZus{}NUMA}
+\PY{k+kt}{void} \PY{o}{*}\PY{n+nf}{\PYZus{}\PYZus{}kmalloc\PYZus{}node\PYZus{}track\PYZus{}caller}\PY{p}{(}\PY{k+kt}{size\PYZus{}t} \PY{n}{size}\PY{p}{,} \PY{k+kt}{gfp\PYZus{}t} \PY{n}{gfp}\PY{p}{,}
+					\PY{k+kt}{int} \PY{n}{node}\PY{p}{,} \PY{k+kt}{unsigned} \PY{k+kt}{long} \PY{n}{caller}\PY{p}{)}
+\PY{p}{\PYZob{}}
+	\PY{k}{return} \PY{n}{\PYZus{}\PYZus{}do\PYZus{}kmalloc\PYZus{}node}\PY{p}{(}\PY{n}{size}\PY{p}{,} \PY{n}{gfp}\PY{p}{,} \PY{n}{node}\PY{p}{,} \PY{n}{caller}\PY{p}{)}\PY{p}{;}
+\PY{p}{\PYZcb{}}
+\PY{c+cp}{\PYZsh{}}\PY{c+cp}{endif}
+\PY{c+cp}{\PYZsh{}}\PY{c+cp}{endif}
+
+\PY{k+kt}{void} \PY{n+nf}{kfree}\PY{p}{(}\PY{k}{const} \PY{k+kt}{void} \PY{o}{*}\PY{n}{block}\PY{p}{)}
+\PY{p}{\PYZob{}}
+	\PY{k}{struct} \PY{n}{page} \PY{o}{*}\PY{n}{sp}\PY{p}{;}
+
+	\PY{n}{trace\PYZus{}kfree}\PY{p}{(}\PY{n}{\PYZus{}RET\PYZus{}IP\PYZus{}}\PY{p}{,} \PY{n}{block}\PY{p}{)}\PY{p}{;}
+
+	\PY{k}{if} \PY{p}{(}\PY{n}{unlikely}\PY{p}{(}\PY{n}{ZERO\PYZus{}OR\PYZus{}NULL\PYZus{}PTR}\PY{p}{(}\PY{n}{block}\PY{p}{)}\PY{p}{)}\PY{p}{)}
+		\PY{k}{return}\PY{p}{;}
+	\PY{n}{kmemleak\PYZus{}free}\PY{p}{(}\PY{n}{block}\PY{p}{)}\PY{p}{;}
+
+	\PY{n}{sp} \PY{o}{=} \PY{n}{virt\PYZus{}to\PYZus{}page}\PY{p}{(}\PY{n}{block}\PY{p}{)}\PY{p}{;}
+	\PY{k}{if} \PY{p}{(}\PY{n}{PageSlab}\PY{p}{(}\PY{n}{sp}\PY{p}{)}\PY{p}{)} \PY{p}{\PYZob{}}
+		\PY{k+kt}{int} \PY{n}{align} \PY{o}{=} \PY{k+kt}{max\PYZus{}t}\PY{p}{(}\PY{k+kt}{size\PYZus{}t}\PY{p}{,} \PY{n}{ARCH\PYZus{}KMALLOC\PYZus{}MINALIGN}\PY{p}{,} \PY{n}{ARCH\PYZus{}SLAB\PYZus{}MINALIGN}\PY{p}{)}\PY{p}{;}
+		\PY{k+kt}{unsigned} \PY{k+kt}{int} \PY{o}{*}\PY{n}{m} \PY{o}{=} \PY{p}{(}\PY{k+kt}{unsigned} \PY{k+kt}{int} \PY{o}{*}\PY{p}{)}\PY{p}{(}\PY{n}{block} \PY{o}{\PYZhy{}} \PY{n}{align}\PY{p}{)}\PY{p}{;}
+		\PY{n}{slob\PYZus{}free}\PY{p}{(}\PY{n}{m}\PY{p}{,} \PY{o}{*}\PY{n}{m} \PY{o}{+} \PY{n}{align}\PY{p}{)}\PY{p}{;}
+	\PY{p}{\PYZcb{}} \PY{k}{else}
+		\PY{n}{\PYZus{}\PYZus{}free\PYZus{}pages}\PY{p}{(}\PY{n}{sp}\PY{p}{,} \PY{n}{compound\PYZus{}order}\PY{p}{(}\PY{n}{sp}\PY{p}{)}\PY{p}{)}\PY{p}{;}
+\PY{p}{\PYZcb{}}
+\PY{n}{EXPORT\PYZus{}SYMBOL}\PY{p}{(}\PY{n}{kfree}\PY{p}{)}\PY{p}{;}
+
+\PY{c+cm}{/* can\PYZsq{}t use ksize for kmem\PYZus{}cache\PYZus{}alloc memory, only kmalloc */}
+\PY{k+kt}{size\PYZus{}t} \PY{n+nf}{ksize}\PY{p}{(}\PY{k}{const} \PY{k+kt}{void} \PY{o}{*}\PY{n}{block}\PY{p}{)}
+\PY{p}{\PYZob{}}
+	\PY{k}{struct} \PY{n}{page} \PY{o}{*}\PY{n}{sp}\PY{p}{;}
+	\PY{k+kt}{int} \PY{n}{align}\PY{p}{;}
+	\PY{k+kt}{unsigned} \PY{k+kt}{int} \PY{o}{*}\PY{n}{m}\PY{p}{;}
+
+	\PY{n}{BUG\PYZus{}ON}\PY{p}{(}\PY{o}{!}\PY{n}{block}\PY{p}{)}\PY{p}{;}
+	\PY{k}{if} \PY{p}{(}\PY{n}{unlikely}\PY{p}{(}\PY{n}{block} \PY{o}{=}\PY{o}{=} \PY{n}{ZERO\PYZus{}SIZE\PYZus{}PTR}\PY{p}{)}\PY{p}{)}
+		\PY{k}{return} \PY{l+m+mi}{0}\PY{p}{;}
+
+	\PY{n}{sp} \PY{o}{=} \PY{n}{virt\PYZus{}to\PYZus{}page}\PY{p}{(}\PY{n}{block}\PY{p}{)}\PY{p}{;}
+	\PY{k}{if} \PY{p}{(}\PY{n}{unlikely}\PY{p}{(}\PY{o}{!}\PY{n}{PageSlab}\PY{p}{(}\PY{n}{sp}\PY{p}{)}\PY{p}{)}\PY{p}{)}
+		\PY{k}{return} \PY{n}{PAGE\PYZus{}SIZE} \PY{o}{\PYZlt{}}\PY{o}{\PYZlt{}} \PY{n}{compound\PYZus{}order}\PY{p}{(}\PY{n}{sp}\PY{p}{)}\PY{p}{;}
+
+	\PY{n}{align} \PY{o}{=} \PY{k+kt}{max\PYZus{}t}\PY{p}{(}\PY{k+kt}{size\PYZus{}t}\PY{p}{,} \PY{n}{ARCH\PYZus{}KMALLOC\PYZus{}MINALIGN}\PY{p}{,} \PY{n}{ARCH\PYZus{}SLAB\PYZus{}MINALIGN}\PY{p}{)}\PY{p}{;}
+	\PY{n}{m} \PY{o}{=} \PY{p}{(}\PY{k+kt}{unsigned} \PY{k+kt}{int} \PY{o}{*}\PY{p}{)}\PY{p}{(}\PY{n}{block} \PY{o}{\PYZhy{}} \PY{n}{align}\PY{p}{)}\PY{p}{;}
+	\PY{k}{return} \PY{n}{SLOB\PYZus{}UNITS}\PY{p}{(}\PY{o}{*}\PY{n}{m}\PY{p}{)} \PY{o}{*} \PY{n}{SLOB\PYZus{}UNIT}\PY{p}{;}
+\PY{p}{\PYZcb{}}
+\PY{n}{EXPORT\PYZus{}SYMBOL}\PY{p}{(}\PY{n}{ksize}\PY{p}{)}\PY{p}{;}
+
+\PY{k+kt}{int} \PY{n+nf}{\PYZus{}\PYZus{}kmem\PYZus{}cache\PYZus{}create}\PY{p}{(}\PY{k}{struct} \PY{n}{kmem\PYZus{}cache} \PY{o}{*}\PY{n}{c}\PY{p}{,} \PY{k+kt}{unsigned} \PY{k+kt}{long} \PY{n}{flags}\PY{p}{)}
+\PY{p}{\PYZob{}}
+	\PY{k}{if} \PY{p}{(}\PY{n}{flags} \PY{o}{\PYZam{}} \PY{n}{SLAB\PYZus{}DESTROY\PYZus{}BY\PYZus{}RCU}\PY{p}{)} \PY{p}{\PYZob{}}
+		\PY{c+cm}{/* leave room for rcu footer at the end of object */}
+		\PY{n}{c}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{size} \PY{o}{+}\PY{o}{=} \PY{k}{sizeof}\PY{p}{(}\PY{k}{struct} \PY{n}{slob\PYZus{}rcu}\PY{p}{)}\PY{p}{;}
+	\PY{p}{\PYZcb{}}
+	\PY{n}{c}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{flags} \PY{o}{=} \PY{n}{flags}\PY{p}{;}
+	\PY{k}{return} \PY{l+m+mi}{0}\PY{p}{;}
+\PY{p}{\PYZcb{}}
+
+\PY{k+kt}{void} \PY{o}{*}\PY{n+nf}{slob\PYZus{}alloc\PYZus{}node}\PY{p}{(}\PY{k}{struct} \PY{n}{kmem\PYZus{}cache} \PY{o}{*}\PY{n}{c}\PY{p}{,} \PY{k+kt}{gfp\PYZus{}t} \PY{n}{flags}\PY{p}{,} \PY{k+kt}{int} \PY{n}{node}\PY{p}{)}
+\PY{p}{\PYZob{}}
+	\PY{k+kt}{void} \PY{o}{*}\PY{n}{b}\PY{p}{;}
+
+	\PY{n}{flags} \PY{o}{\PYZam{}}\PY{o}{=} \PY{n}{gfp\PYZus{}allowed\PYZus{}mask}\PY{p}{;}
+
+	\PY{n}{lockdep\PYZus{}trace\PYZus{}alloc}\PY{p}{(}\PY{n}{flags}\PY{p}{)}\PY{p}{;}
+
+	\PY{k}{if} \PY{p}{(}\PY{n}{c}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{size} \PY{o}{\PYZlt{}} \PY{n}{PAGE\PYZus{}SIZE}\PY{p}{)} \PY{p}{\PYZob{}}
+		\PY{n}{b} \PY{o}{=} \PY{n}{slob\PYZus{}alloc}\PY{p}{(}\PY{n}{c}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{size}\PY{p}{,} \PY{n}{flags}\PY{p}{,} \PY{n}{c}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{align}\PY{p}{,} \PY{n}{node}\PY{p}{)}\PY{p}{;}
+		\PY{n}{trace\PYZus{}kmem\PYZus{}cache\PYZus{}alloc\PYZus{}node}\PY{p}{(}\PY{n}{\PYZus{}RET\PYZus{}IP\PYZus{}}\PY{p}{,} \PY{n}{b}\PY{p}{,} \PY{n}{c}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{object\PYZus{}size}\PY{p}{,}
+					    \PY{n}{SLOB\PYZus{}UNITS}\PY{p}{(}\PY{n}{c}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{size}\PY{p}{)} \PY{o}{*} \PY{n}{SLOB\PYZus{}UNIT}\PY{p}{,}
+					    \PY{n}{flags}\PY{p}{,} \PY{n}{node}\PY{p}{)}\PY{p}{;}
+	\PY{p}{\PYZcb{}} \PY{k}{else} \PY{p}{\PYZob{}}
+		\PY{n}{b} \PY{o}{=} \PY{n}{slob\PYZus{}new\PYZus{}pages}\PY{p}{(}\PY{n}{flags}\PY{p}{,} \PY{n}{get\PYZus{}order}\PY{p}{(}\PY{n}{c}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{size}\PY{p}{)}\PY{p}{,} \PY{n}{node}\PY{p}{)}\PY{p}{;}
+		\PY{n}{trace\PYZus{}kmem\PYZus{}cache\PYZus{}alloc\PYZus{}node}\PY{p}{(}\PY{n}{\PYZus{}RET\PYZus{}IP\PYZus{}}\PY{p}{,} \PY{n}{b}\PY{p}{,} \PY{n}{c}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{object\PYZus{}size}\PY{p}{,}
+					    \PY{n}{PAGE\PYZus{}SIZE} \PY{o}{\PYZlt{}}\PY{o}{\PYZlt{}} \PY{n}{get\PYZus{}order}\PY{p}{(}\PY{n}{c}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{size}\PY{p}{)}\PY{p}{,}
+					    \PY{n}{flags}\PY{p}{,} \PY{n}{node}\PY{p}{)}\PY{p}{;}
+	\PY{p}{\PYZcb{}}
+
+	\PY{k}{if} \PY{p}{(}\PY{n}{b} \PY{o}{\PYZam{}}\PY{o}{\PYZam{}} \PY{n}{c}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{ctor}\PY{p}{)}
+		\PY{n}{c}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{ctor}\PY{p}{(}\PY{n}{b}\PY{p}{)}\PY{p}{;}
+
+	\PY{n}{kmemleak\PYZus{}alloc\PYZus{}recursive}\PY{p}{(}\PY{n}{b}\PY{p}{,} \PY{n}{c}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{size}\PY{p}{,} \PY{l+m+mi}{1}\PY{p}{,} \PY{n}{c}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{flags}\PY{p}{,} \PY{n}{flags}\PY{p}{)}\PY{p}{;}
+	\PY{k}{return} \PY{n}{b}\PY{p}{;}
+\PY{p}{\PYZcb{}}
+\PY{n}{EXPORT\PYZus{}SYMBOL}\PY{p}{(}\PY{n}{slob\PYZus{}alloc\PYZus{}node}\PY{p}{)}\PY{p}{;}
+
+\PY{k+kt}{void} \PY{o}{*}\PY{n+nf}{kmem\PYZus{}cache\PYZus{}alloc}\PY{p}{(}\PY{k}{struct} \PY{n}{kmem\PYZus{}cache} \PY{o}{*}\PY{n}{cachep}\PY{p}{,} \PY{k+kt}{gfp\PYZus{}t} \PY{n}{flags}\PY{p}{)}
+\PY{p}{\PYZob{}}
+	\PY{k}{return} \PY{n}{slob\PYZus{}alloc\PYZus{}node}\PY{p}{(}\PY{n}{cachep}\PY{p}{,} \PY{n}{flags}\PY{p}{,} \PY{n}{NUMA\PYZus{}NO\PYZus{}NODE}\PY{p}{)}\PY{p}{;}
+\PY{p}{\PYZcb{}}
+\PY{n}{EXPORT\PYZus{}SYMBOL}\PY{p}{(}\PY{n}{kmem\PYZus{}cache\PYZus{}alloc}\PY{p}{)}\PY{p}{;}
+
+\PY{c+cp}{\PYZsh{}}\PY{c+cp}{ifdef CONFIG\PYZus{}NUMA}
+\PY{k+kt}{void} \PY{o}{*}\PY{n+nf}{\PYZus{}\PYZus{}kmalloc\PYZus{}node}\PY{p}{(}\PY{k+kt}{size\PYZus{}t} \PY{n}{size}\PY{p}{,} \PY{k+kt}{gfp\PYZus{}t} \PY{n}{gfp}\PY{p}{,} \PY{k+kt}{int} \PY{n}{node}\PY{p}{)}
+\PY{p}{\PYZob{}}
+	\PY{k}{return} \PY{n}{\PYZus{}\PYZus{}do\PYZus{}kmalloc\PYZus{}node}\PY{p}{(}\PY{n}{size}\PY{p}{,} \PY{n}{gfp}\PY{p}{,} \PY{n}{node}\PY{p}{,} \PY{n}{\PYZus{}RET\PYZus{}IP\PYZus{}}\PY{p}{)}\PY{p}{;}
+\PY{p}{\PYZcb{}}
+\PY{n}{EXPORT\PYZus{}SYMBOL}\PY{p}{(}\PY{n}{\PYZus{}\PYZus{}kmalloc\PYZus{}node}\PY{p}{)}\PY{p}{;}
+
+\PY{k+kt}{void} \PY{o}{*}\PY{n+nf}{kmem\PYZus{}cache\PYZus{}alloc\PYZus{}node}\PY{p}{(}\PY{k}{struct} \PY{n}{kmem\PYZus{}cache} \PY{o}{*}\PY{n}{cachep}\PY{p}{,} \PY{k+kt}{gfp\PYZus{}t} \PY{n}{gfp}\PY{p}{,} \PY{k+kt}{int} \PY{n}{node}\PY{p}{)}
+\PY{p}{\PYZob{}}
+	\PY{k}{return} \PY{n}{slob\PYZus{}alloc\PYZus{}node}\PY{p}{(}\PY{n}{cachep}\PY{p}{,} \PY{n}{gfp}\PY{p}{,} \PY{n}{node}\PY{p}{)}\PY{p}{;}
+\PY{p}{\PYZcb{}}
+\PY{n}{EXPORT\PYZus{}SYMBOL}\PY{p}{(}\PY{n}{kmem\PYZus{}cache\PYZus{}alloc\PYZus{}node}\PY{p}{)}\PY{p}{;}
+\PY{c+cp}{\PYZsh{}}\PY{c+cp}{endif}
+
+\PY{k}{static} \PY{k+kt}{void} \PY{n+nf}{\PYZus{}\PYZus{}kmem\PYZus{}cache\PYZus{}free}\PY{p}{(}\PY{k+kt}{void} \PY{o}{*}\PY{n}{b}\PY{p}{,} \PY{k+kt}{int} \PY{n}{size}\PY{p}{)}
+\PY{p}{\PYZob{}}
+	\PY{k}{if} \PY{p}{(}\PY{n}{size} \PY{o}{\PYZlt{}} \PY{n}{PAGE\PYZus{}SIZE}\PY{p}{)}
+		\PY{n}{slob\PYZus{}free}\PY{p}{(}\PY{n}{b}\PY{p}{,} \PY{n}{size}\PY{p}{)}\PY{p}{;}
+	\PY{k}{else}
+		\PY{n}{slob\PYZus{}free\PYZus{}pages}\PY{p}{(}\PY{n}{b}\PY{p}{,} \PY{n}{get\PYZus{}order}\PY{p}{(}\PY{n}{size}\PY{p}{)}\PY{p}{)}\PY{p}{;}
+\PY{p}{\PYZcb{}}
+
+\PY{k}{static} \PY{k+kt}{void} \PY{n+nf}{kmem\PYZus{}rcu\PYZus{}free}\PY{p}{(}\PY{k}{struct} \PY{n}{rcu\PYZus{}head} \PY{o}{*}\PY{n}{head}\PY{p}{)}
+\PY{p}{\PYZob{}}
+	\PY{k}{struct} \PY{n}{slob\PYZus{}rcu} \PY{o}{*}\PY{n}{slob\PYZus{}rcu} \PY{o}{=} \PY{p}{(}\PY{k}{struct} \PY{n}{slob\PYZus{}rcu} \PY{o}{*}\PY{p}{)}\PY{n}{head}\PY{p}{;}
+	\PY{k+kt}{void} \PY{o}{*}\PY{n}{b} \PY{o}{=} \PY{p}{(}\PY{k+kt}{void} \PY{o}{*}\PY{p}{)}\PY{n}{slob\PYZus{}rcu} \PY{o}{\PYZhy{}} \PY{p}{(}\PY{n}{slob\PYZus{}rcu}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{size} \PY{o}{\PYZhy{}} \PY{k}{sizeof}\PY{p}{(}\PY{k}{struct} \PY{n}{slob\PYZus{}rcu}\PY{p}{)}\PY{p}{)}\PY{p}{;}
+
+	\PY{n}{\PYZus{}\PYZus{}kmem\PYZus{}cache\PYZus{}free}\PY{p}{(}\PY{n}{b}\PY{p}{,} \PY{n}{slob\PYZus{}rcu}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{size}\PY{p}{)}\PY{p}{;}
+\PY{p}{\PYZcb{}}
+
+\PY{k+kt}{void} \PY{n+nf}{kmem\PYZus{}cache\PYZus{}free}\PY{p}{(}\PY{k}{struct} \PY{n}{kmem\PYZus{}cache} \PY{o}{*}\PY{n}{c}\PY{p}{,} \PY{k+kt}{void} \PY{o}{*}\PY{n}{b}\PY{p}{)}
+\PY{p}{\PYZob{}}
+	\PY{n}{kmemleak\PYZus{}free\PYZus{}recursive}\PY{p}{(}\PY{n}{b}\PY{p}{,} \PY{n}{c}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{flags}\PY{p}{)}\PY{p}{;}
+	\PY{k}{if} \PY{p}{(}\PY{n}{unlikely}\PY{p}{(}\PY{n}{c}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{flags} \PY{o}{\PYZam{}} \PY{n}{SLAB\PYZus{}DESTROY\PYZus{}BY\PYZus{}RCU}\PY{p}{)}\PY{p}{)} \PY{p}{\PYZob{}}
+		\PY{k}{struct} \PY{n}{slob\PYZus{}rcu} \PY{o}{*}\PY{n}{slob\PYZus{}rcu}\PY{p}{;}
+		\PY{n}{slob\PYZus{}rcu} \PY{o}{=} \PY{n}{b} \PY{o}{+} \PY{p}{(}\PY{n}{c}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{size} \PY{o}{\PYZhy{}} \PY{k}{sizeof}\PY{p}{(}\PY{k}{struct} \PY{n}{slob\PYZus{}rcu}\PY{p}{)}\PY{p}{)}\PY{p}{;}
+		\PY{n}{slob\PYZus{}rcu}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{size} \PY{o}{=} \PY{n}{c}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{size}\PY{p}{;}
+		\PY{n}{call\PYZus{}rcu}\PY{p}{(}\PY{o}{\PYZam{}}\PY{n}{slob\PYZus{}rcu}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{head}\PY{p}{,} \PY{n}{kmem\PYZus{}rcu\PYZus{}free}\PY{p}{)}\PY{p}{;}
+	\PY{p}{\PYZcb{}} \PY{k}{else} \PY{p}{\PYZob{}}
+		\PY{n}{\PYZus{}\PYZus{}kmem\PYZus{}cache\PYZus{}free}\PY{p}{(}\PY{n}{b}\PY{p}{,} \PY{n}{c}\PY{o}{\PYZhy{}}\PY{o}{\PYZgt{}}\PY{n}{size}\PY{p}{)}\PY{p}{;}
+	\PY{p}{\PYZcb{}}
+
+	\PY{n}{trace\PYZus{}kmem\PYZus{}cache\PYZus{}free}\PY{p}{(}\PY{n}{\PYZus{}RET\PYZus{}IP\PYZus{}}\PY{p}{,} \PY{n}{b}\PY{p}{)}\PY{p}{;}
+\PY{p}{\PYZcb{}}
+\PY{n}{EXPORT\PYZus{}SYMBOL}\PY{p}{(}\PY{n}{kmem\PYZus{}cache\PYZus{}free}\PY{p}{)}\PY{p}{;}
+
+\PY{k+kt}{int} \PY{n+nf}{\PYZus{}\PYZus{}kmem\PYZus{}cache\PYZus{}shutdown}\PY{p}{(}\PY{k}{struct} \PY{n}{kmem\PYZus{}cache} \PY{o}{*}\PY{n}{c}\PY{p}{)}
+\PY{p}{\PYZob{}}
+	\PY{c+cm}{/* No way to check for remaining objects */}
+	\PY{k}{return} \PY{l+m+mi}{0}\PY{p}{;}
+\PY{p}{\PYZcb{}}
+
+\PY{k+kt}{int} \PY{n+nf}{kmem\PYZus{}cache\PYZus{}shrink}\PY{p}{(}\PY{k}{struct} \PY{n}{kmem\PYZus{}cache} \PY{o}{*}\PY{n}{d}\PY{p}{)}
+\PY{p}{\PYZob{}}
+	\PY{k}{return} \PY{l+m+mi}{0}\PY{p}{;}
+\PY{p}{\PYZcb{}}
+\PY{n}{EXPORT\PYZus{}SYMBOL}\PY{p}{(}\PY{n}{kmem\PYZus{}cache\PYZus{}shrink}\PY{p}{)}\PY{p}{;}
+
+\PY{k}{struct} \PY{n}{kmem\PYZus{}cache} \PY{n}{kmem\PYZus{}cache\PYZus{}boot} \PY{o}{=} \PY{p}{\PYZob{}}
+	\PY{p}{.}\PY{n}{name} \PY{o}{=} \PY{l+s}{\PYZdq{}}\PY{l+s}{kmem\PYZus{}cache}\PY{l+s}{\PYZdq{}}\PY{p}{,}
+	\PY{p}{.}\PY{n}{size} \PY{o}{=} \PY{k}{sizeof}\PY{p}{(}\PY{k}{struct} \PY{n}{kmem\PYZus{}cache}\PY{p}{)}\PY{p}{,}
+	\PY{p}{.}\PY{n}{flags} \PY{o}{=} \PY{n}{SLAB\PYZus{}PANIC}\PY{p}{,}
+	\PY{p}{.}\PY{n}{align} \PY{o}{=} \PY{n}{ARCH\PYZus{}KMALLOC\PYZus{}MINALIGN}\PY{p}{,}
+\PY{p}{\PYZcb{}}\PY{p}{;}
+
+\PY{k+kt}{void} \PY{n}{\PYZus{}\PYZus{}init} \PY{n+nf}{kmem\PYZus{}cache\PYZus{}init}\PY{p}{(}\PY{k+kt}{void}\PY{p}{)}
+\PY{p}{\PYZob{}}
+	\PY{n}{kmem\PYZus{}cache} \PY{o}{=} \PY{o}{\PYZam{}}\PY{n}{kmem\PYZus{}cache\PYZus{}boot}\PY{p}{;}
+	\PY{n}{slab\PYZus{}state} \PY{o}{=} \PY{n}{UP}\PY{p}{;}
+\PY{p}{\PYZcb{}}
+
+\PY{k+kt}{void} \PY{n}{\PYZus{}\PYZus{}init} \PY{n+nf}{kmem\PYZus{}cache\PYZus{}init\PYZus{}late}\PY{p}{(}\PY{k+kt}{void}\PY{p}{)}
+\PY{p}{\PYZob{}}
+	\PY{n}{slab\PYZus{}state} \PY{o}{=} \PY{n}{FULL}\PY{p}{;}
+\PY{p}{\PYZcb{}}
+\end{Verbatim}

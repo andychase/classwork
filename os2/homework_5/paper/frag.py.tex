@@ -1,0 +1,34 @@
+\begin{Verbatim}[commandchars=\\\{\},numbers=left,firstnumber=1,stepnumber=1]
+\PY{c}{\PYZsh{}!/usr/bin/python}
+\PY{k+kn}{import} \PY{n+nn}{sys}
+
+\PY{n}{mult\PYZus{}list} \PY{o}{=} \PY{p}{[}
+ \PY{l+m+mi}{4}\PY{p}{,}
+ \PY{l+m+mi}{8}\PY{p}{,}
+ \PY{l+m+mi}{16}\PY{p}{,}
+ \PY{l+m+mi}{32}\PY{p}{,}
+ \PY{l+m+mi}{64}\PY{p}{,}
+ \PY{l+m+mi}{128}\PY{p}{,}
+ \PY{l+m+mi}{256}\PY{p}{,}
+ \PY{l+m+mi}{512}\PY{p}{,}
+ \PY{l+m+mi}{1024}\PY{p}{,}
+ \PY{l+m+mi}{2048}\PY{p}{,}
+ \PY{l+m+mi}{4096}
+\PY{p}{]}
+
+\PY{n}{example\PYZus{}data} \PY{o}{=} \PY{l+s}{\PYZdq{}}\PY{l+s}{Node 0, zone   Normal     75     51     57     16      2      0      0      1      1      2     72}\PY{l+s}{\PYZdq{}}
+\PY{n}{example\PYZus{}data\PYZus{}2} \PY{o}{=} \PY{l+s}{\PYZdq{}}\PY{l+s}{Normal    272    144     80     50     33     13      2      1      2      1     71 }\PY{l+s}{\PYZdq{}}
+
+\PY{k}{def} \PY{n+nf}{get\PYZus{}number\PYZus{}list}\PY{p}{(}\PY{n}{input\PYZus{}string}\PY{p}{)}\PY{p}{:}
+	\PY{k}{return} \PY{p}{(}\PY{n+nb}{int}\PY{p}{(}\PY{n}{i}\PY{p}{)} \PY{k}{for} \PY{n}{i} \PY{o+ow}{in} \PY{n}{input\PYZus{}string}\PY{o}{.}\PY{n}{split}\PY{p}{(}\PY{l+s}{\PYZdq{}}\PY{l+s}{zone   Normal}\PY{l+s}{\PYZdq{}}\PY{p}{)}\PY{p}{[}\PY{l+m+mi}{1}\PY{p}{]}\PY{o}{.}\PY{n}{split}\PY{p}{(}\PY{p}{)}\PY{p}{)}
+
+\PY{k}{def} \PY{n+nf}{get\PYZus{}fragmentation}\PY{p}{(}\PY{n}{input\PYZus{}blocks}\PY{p}{)}\PY{p}{:}
+	\PY{k}{return} \PY{p}{(}\PY{n+nb}{sum}\PY{p}{(}\PY{n}{input\PYZus{}blocks}\PY{p}{)} \PY{o}{\PYZhy{}} \PY{n}{input\PYZus{}blocks}\PY{p}{[}\PY{o}{\PYZhy{}}\PY{l+m+mi}{1}\PY{p}{]}\PY{p}{)} \PY{o}{/} \PY{n+nb}{float}\PY{p}{(}\PY{n+nb}{sum}\PY{p}{(}\PY{n}{input\PYZus{}blocks}\PY{p}{)}\PY{p}{)}
+
+\PY{k}{def} \PY{n+nf}{size\PYZus{}blocks}\PY{p}{(}\PY{n}{number\PYZus{}list}\PY{p}{)}\PY{p}{:}
+	\PY{k}{for} \PY{n}{block}\PY{p}{,} \PY{n}{size} \PY{o+ow}{in} \PY{n+nb}{zip}\PY{p}{(}\PY{n}{number\PYZus{}list}\PY{p}{,} \PY{n}{mult\PYZus{}list}\PY{p}{)}\PY{p}{:}
+		\PY{k}{yield} \PY{n}{block}\PY{o}{*}\PY{n}{size}
+
+\PY{n}{data} \PY{o}{=} \PY{n+nb}{open}\PY{p}{(}\PY{l+s}{\PYZdq{}}\PY{l+s}{/proc/buddyinfo}\PY{l+s}{\PYZdq{}}\PY{p}{,} \PY{l+s}{\PYZdq{}}\PY{l+s}{r}\PY{l+s}{\PYZdq{}}\PY{p}{)}\PY{o}{.}\PY{n}{read}\PY{p}{(}\PY{p}{)}
+\PY{k}{print}\PY{p}{(}\PY{n}{get\PYZus{}fragmentation}\PY{p}{(}\PY{n+nb}{list}\PY{p}{(}\PY{n}{size\PYZus{}blocks}\PY{p}{(}\PY{n}{get\PYZus{}number\PYZus{}list}\PY{p}{(}\PY{n}{data}\PY{p}{)}\PY{p}{)}\PY{p}{)}\PY{p}{)}\PY{p}{)}
+\end{Verbatim}
